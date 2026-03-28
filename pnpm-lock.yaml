@@ -32,7 +32,6 @@ overrides:
   minimatch: '>=10.2.3'
   smol-toml: '>=1.6.1'
   tmp: ^0.2.4
-  workspace-tools: 0.41.0
 
 pnpmfileChecksum: sha256-+BW5qVPDUKRhCeT7S0gSw7HUQY2ejAjJGd+tvtZaoBY=
 

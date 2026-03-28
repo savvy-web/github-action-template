@@ -50,6 +50,7 @@ jobs:
           dry-run: ${{ inputs.dry-run || false }}
           log-level: ${{ inputs.log-level || 'info' }}
           auto-merge: "squash"
+          changesets: false
           config-dependencies: |
             @savvy-web/pnpm-plugin-silk
           dependencies: |
