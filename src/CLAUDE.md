@@ -1,6 +1,6 @@
 # src/CLAUDE.md
 
-Source code architecture and coding patterns for workflow-release-action.
+Source code architecture and coding patterns for silk-release-action.
 
 **See also:** [Root CLAUDE.md](../CLAUDE.md) | [**tests**/CLAUDE.md](../__tests__/CLAUDE.md)
 
