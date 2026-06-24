@@ -105,7 +105,7 @@ jobs:
             title: 📦 Multi-Runtime (Create Cache)
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Test fixture
         id: test
         continue-on-error: true
@@ -231,7 +231,7 @@ jobs:
             title: 📦 Multi-Runtime (Restore Cache)
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Test fixture
         id: test
         continue-on-error: true
@@ -324,7 +324,7 @@ jobs:
             title: 🔧 Turbo + Biome Install
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Test fixture
         id: test
         continue-on-error: true
@@ -405,7 +405,7 @@ jobs:
             title: 📝 Additional Inputs (JSON)
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Test fixture
         id: test
         uses: ./.github/actions/test-fixture
