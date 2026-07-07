@@ -39,28 +39,28 @@
 		"@effect/platform-node": "catalog:silk",
 		"@effect/rpc": "catalog:silk",
 		"@effect/sql": "catalog:silk",
-		"@savvy-web/github-action-effects": "^2.1.3",
+		"@savvy-web/github-action-effects": "^2.3.7",
 		"effect": "catalog:silk"
 	},
 	"devDependencies": {
-		"@savvy-web/github-action-builder": "^0.7.6",
-		"@savvy-web/silk": "^0.4.0",
-		"@savvy-web/vitest": "^1.5.0"
+		"@savvy-web/github-action-builder": "^1.1.1",
+		"@savvy-web/silk": "^1.3.11",
+		"@savvy-web/vitest": "^1.6.0"
 	},
-	"packageManager": "pnpm@11.5.1+sha512.93f7b57422ea7068257235b4c16eb60762eb68e1dc23723199cc739043ea9be2c4143274a399d8c6defa2b1176226d9ca1c4b63482d6200c1a8fbaa78c1d1485",
+	"packageManager": "pnpm@11.10.0+sha512.0b7f8b98060031904c017e3a41eb187a16d40eeb829b95c4f8cb03681761fc4ab53dd219115b9b447f4dce1a05a214764461e7d3703392a9f32f9511ce8c86c8",
 	"engines": {
 		"node": ">=24.0.0"
 	},
 	"devEngines": {
 		"packageManager": {
 			"name": "pnpm",
-			"version": "11.5.1+sha512.93f7b57422ea7068257235b4c16eb60762eb68e1dc23723199cc739043ea9be2c4143274a399d8c6defa2b1176226d9ca1c4b63482d6200c1a8fbaa78c1d1485",
+			"version": "11.10.0+sha512.0b7f8b98060031904c017e3a41eb187a16d40eeb829b95c4f8cb03681761fc4ab53dd219115b9b447f4dce1a05a214764461e7d3703392a9f32f9511ce8c86c8",
 			"onFail": "ignore"
 		},
 		"runtime": [
 			{
 				"name": "node",
-				"version": "26.3.0",
+				"version": "26.4.0",
 				"onFail": "ignore"
 			}
 		]
