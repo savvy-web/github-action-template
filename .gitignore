@@ -33,3 +33,6 @@ pnpm-release.json
 CLAUDE.local.md
 **/coverage-debug
 .claude/plugins-debug.log
+
+## Remove for production
+**/dist
