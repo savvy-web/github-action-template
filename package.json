@@ -40,23 +40,23 @@
 	},
 	"devDependencies": {
 		"@savvy-web/github-action-builder": "^2.0.2",
-		"@savvy-web/silk": "^3.0.2",
-		"@vitest-agent/plugin": "^2.0.0"
+		"@savvy-web/silk": "^3.0.3",
+		"@vitest-agent/plugin": "^2.0.1"
 	},
-	"packageManager": "pnpm@11.12.0+sha512.820a6fbd0d9f04c226638002aead1e45340a9139dd5dc077c1d83ef44aa2481c8eb6637b4c9aa696a3c7e35ba818e49cf27213e5f2b91138d09b7a3e26e898ba",
+	"packageManager": "pnpm@11.15.0+sha512.266f8957a30d2be6e9468e5e66bcdedd35a794175f71b067ba8504d686cce1d0c0f429b33c323c3c569ad4891e667574a49ff71d1b89a22cc66f13c65818c578",
 	"engines": {
 		"node": ">=24.0.0"
 	},
 	"devEngines": {
 		"packageManager": {
 			"name": "pnpm",
-			"version": "11.12.0+sha512.820a6fbd0d9f04c226638002aead1e45340a9139dd5dc077c1d83ef44aa2481c8eb6637b4c9aa696a3c7e35ba818e49cf27213e5f2b91138d09b7a3e26e898ba",
+			"version": "11.15.0+sha512.266f8957a30d2be6e9468e5e66bcdedd35a794175f71b067ba8504d686cce1d0c0f429b33c323c3c569ad4891e667574a49ff71d1b89a22cc66f13c65818c578",
 			"onFail": "ignore"
 		},
 		"runtime": [
 			{
 				"name": "node",
-				"version": "26.3.0",
+				"version": "26.5.0",
 				"onFail": "ignore"
 			}
 		]
