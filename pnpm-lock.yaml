@@ -71,7 +71,7 @@ importers:
         specifier: ^2.0.6
         version: 2.0.6(@effected/glob@0.2.0(effect@4.0.0-beta.99))(@effected/jsonc@0.5.0(effect@4.0.0-beta.99))(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(ioredis@5.11.1(supports-color@7.2.0))(supports-color@7.2.0)(typescript@7.0.2)(vitest@4.1.10)
       ajv:
-        specifier: ^8.2.0
+        specifier: ^8.20.0
         version: 8.20.0
 
 packages:
