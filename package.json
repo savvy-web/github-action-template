@@ -19,11 +19,11 @@
 		"build:prod": "github-action-builder build",
 		"ci:build": "CI=\"true\" turbo run build:prod --log-order=grouped --output-logs=full",
 		"ci:test": "CI=\"true\" vitest run --coverage",
-		"ci:version": "savvy changeset version && biome format --write .",
+		"generate:schema": "tsx lib/scripts/generate-schema.ts && biome format --write silk.config.schema.json",
 		"lint": "biome check --max-diagnostics=none",
 		"lint:fix": "biome check --write --max-diagnostics=none",
 		"lint:fix:unsafe": "biome check --write --unsafe --max-diagnostics=none",
-		"lint:md": "markdownlint-cli2 '**/*.{md,mdx}' --config './lib/configs/.markdownlint-cli2.jsonc'",
+		"lint:md": "markdownlint-cli2 --config './lib/configs/.markdownlint-cli2.jsonc'",
 		"lint:md:fix": "markdownlint-cli2  --config './lib/configs/.markdownlint-cli2.jsonc' --fix",
 		"prepare": "husky",
 		"test": "vitest run --pass-with-no-tests",
@@ -40,12 +40,13 @@
 	},
 	"devDependencies": {
 		"@savvy-web/github-action-builder": "^2.0.4",
-		"@savvy-web/silk": "^3.1.2",
-		"@vitest-agent/plugin": "^2.0.6"
+		"@savvy-web/silk": "^3.2.0",
+		"@vitest-agent/plugin": "^2.0.6",
+		"ajv": "^8.2.0"
 	},
 	"packageManager": "pnpm@11.16.0+sha512.b767e9a98fc87aec0f42daefcd0e84941c2cdb45d73c4e1e68860fb2bdfdbe032ab592105479e5e05c237f740c8a5ffdbbb52385797ddc2296745a1bbb883e8d",
 	"engines": {
-		"node": ">=24.0.0"
+		"node": ">=24.11.0"
 	},
 	"devEngines": {
 		"packageManager": {

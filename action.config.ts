@@ -10,7 +10,7 @@ export default defineConfig({
 		minify: true,
 	},
 	persistLocal: {
-		enabled: true,
+		enabled: false,
 		path: ".github/actions/local",
 	},
 });

@@ -4,10 +4,10 @@ branding:
   icon: package
   color: blue
 inputs:
-  app-id:
-    description: GitHub App ID for authentication
+  app-client-id:
+    description: GitHub App client ID for authentication
     required: true
-  private-key:
+  app-private-key:
     description: GitHub App private key (PEM format)
     required: true
 outputs:
