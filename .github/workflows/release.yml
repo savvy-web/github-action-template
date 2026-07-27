@@ -31,5 +31,6 @@ jobs:
       artifact-metadata: write
     with:
       dry-run: ${{ inputs.dry_run || false }}
+      auto-merge: "squash"
       skip-claude-review: false
     secrets: inherit
