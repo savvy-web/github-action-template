@@ -39,8 +39,8 @@
 		"effect": "catalog:effect"
 	},
 	"devDependencies": {
-		"@savvy-web/github-action-builder": "^2.2.0",
-		"@savvy-web/silk": "^3.3.0",
+		"@savvy-web/github-action-builder": "^2.2.1",
+		"@savvy-web/silk": "^3.3.1",
 		"@vitest-agent/plugin": "^2.0.11",
 		"ajv": "^8.20.0"
 	},
