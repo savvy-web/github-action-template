@@ -1,0 +1,28 @@
+name: Local Test
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# The local smoke loop: run the committed persistLocal bundle
+# (.github/actions/local) without publishing anything. Runnable on a laptop
+# with `act` (see .actrc) or from the Actions tab.
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run the local action
+        id: demo
+        uses: ./.github/actions/local
+        with:
+          name: act
+          emphatic: "true"
+      - name: Assert outputs
+        env:
+          GREETING: ${{ steps.demo.outputs.greeting }}
+          SUMMARY_WRITTEN: ${{ steps.demo.outputs.summary-written }}
+        run: |
+          test "$GREETING" = "Hello, act!"
+          test "$SUMMARY_WRITTEN" = "true"
