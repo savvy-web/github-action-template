@@ -33,8 +33,6 @@ pnpm-release.json
 .claude/schedule_task.lock
 .claude/plans
 .claude/cache/
-.claude/agents
-.claude/skills
 CLAUDE.local.md
 **/coverage-debug
 .claude/plugins-debug.log

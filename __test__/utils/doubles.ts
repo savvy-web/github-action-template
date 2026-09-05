@@ -81,12 +81,24 @@ export interface ActionOutputsRecording {
 /**
  * An `ActionOutputs` that records output writes and summary appends; every
  * other member keeps the kit double's die-loudly behavior.
+ *
+ * @remarks
+ * `setJson` records the value the RUNNER would see — encoded through the
+ * caller's own schema and `JSON.stringify`ed, exactly as the real member does
+ * — rather than the in-memory object. A double that recorded the object would
+ * pass while the published payload was unencodable, which is the one failure
+ * `setJson` exists to catch.
  */
 export const actionOutputsTestLayer = (recording: ActionOutputsRecording): Layer.Layer<ActionOutputs> =>
 	ActionOutputs.layerTest({
 		set: (name, value) =>
 			Effect.sync(() => {
 				recording.sets.push({ name, value });
+			}),
+		setJson: <A, I>(name: string, value: A, schema: Schema.Codec<A, I>) =>
+			Effect.gen(function* () {
+				const encoded = yield* Schema.encodeUnknownEffect(schema)(value).pipe(Effect.orDie);
+				recording.sets.push({ name, value: JSON.stringify(encoded) });
 			}),
 		summary: (content) =>
 			Effect.sync(() => {

@@ -48,6 +48,7 @@ const pipeline = (inputs: Inputs): Effect.Effect<OutputsModel, never, ActionLogg
 			...initialOutputs,
 			greeting: greeted.greeting,
 			summaryWritten: summary.written,
+			dryRun: inputs.dryRun,
 		};
 	});
 
@@ -55,17 +56,35 @@ const pipeline = (inputs: Inputs): Effect.Effect<OutputsModel, never, ActionLogg
  * The main-phase program `Action.run` executes.
  *
  * @remarks
- * Outputs are emitted on EVERY exit path: the success path emits the folded
- * model, and `Effect.onError` emits the all-disabled baseline so a consuming
- * workflow can always read every declared output. Failure still fails the
- * effect — never `setFailed`-and-return — so the job's verdict comes from
- * the error channel, rendered by `Action.run`.
+ * **The output baseline is emitted FIRST, before any work** — before
+ * `readInputs`, which is the earliest thing that can abort the run — so every
+ * declared output has a value on every exit path. Later writes only ever
+ * refine it.
+ *
+ * Emitting up front rather than from an `Effect.onError` handler is
+ * deliberate, and the `onError` form is a recorded anti-pattern this module
+ * used to carry: a failure handler that re-emits the baseline also OVERWRITES
+ * anything a step already published, so a run that did consumer-visible work
+ * and then failed later would report the all-disabled defaults — not a
+ * conservative fallback, a false statement about work that actually happened.
+ * The residual gap (an unexpected failure between steps, after one of them did
+ * externally-visible work) is closed AT THE STEP: a step whose result must
+ * survive a later failure emits its own output as soon as it lands. This
+ * template's only mutation is the job summary, which nothing downstream reads
+ * back, so the single closing write is sufficient here.
+ *
+ * Failure still fails the effect — never `setFailed`-and-return — so the job's
+ * verdict comes from the error channel, rendered by `Action.run`.
  */
 export const program: Effect.Effect<
 	void,
 	InputError | Config.ConfigError | ActionStateError | ActionOutputError,
 	ActionLogger | ActionOutputs | ActionState
 > = Effect.gen(function* () {
+	// The all-disabled baseline, BEFORE any work — including before the inputs
+	// are read. See the remarks above for why this is not an `onError` handler.
+	yield* emitOutputs(initialOutputs);
+
 	const inputs = yield* readInputs;
 	const state = yield* ActionState;
 
@@ -85,9 +104,4 @@ export const program: Effect.Effect<
 	for (const line of resultLines(outputs)) {
 		yield* Effect.logInfo(line);
 	}
-}).pipe(
-	// Outputs-on-every-abort-path: a failed run still publishes the
-	// all-disabled baseline. `Effect.ignore` keeps the cleanup infallible;
-	// the original failure is re-raised untouched.
-	Effect.onError(() => emitOutputs(initialOutputs).pipe(Effect.ignore)),
-);
+});

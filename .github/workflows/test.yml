@@ -1,0 +1,110 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, changeset-release/main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TURBO_TELEMETRY_DISABLED: "1"
+  DO_NOT_TRACK: "1"
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup runtime
+        uses: savvy-web/silk-runtime-action@v1
+        with:
+          install-deps: "true"
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Lint markdown
+        run: pnpm lint:md
+
+      # The gate is the `Tests:` line, not the exit code: a project-filtered run
+      # that collects nothing prints `0/0 passed` and exits 0. `ci:test` runs the
+      # whole suite with coverage and without `--pass-with-no-tests`, so an empty
+      # or uncollected suite fails here rather than reporting green.
+      - name: Test
+        run: pnpm ci:test
+
+      - name: Validate action.yml against the built entries
+        run: pnpm validate
+
+  dist-freshness:
+    name: dist freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup runtime
+        uses: savvy-web/silk-runtime-action@v1
+        with:
+          install-deps: "true"
+
+      # `dist/` and `.github/actions/local/` are COMMITTED — the runner executes
+      # them, not `src/`. vitest runs source, so the suite can never see a stale
+      # bundle: without this gate a merged source change ships an action that
+      # still behaves like the previous commit, and nothing reports it.
+      - name: Rebuild the committed bundles
+        run: pnpm build
+
+      - name: Fail if the committed bundles are stale
+        run: |
+          if ! git diff --quiet --exit-code -- dist .github/actions/local; then
+            echo "::error::dist/ or .github/actions/local/ is out of date. Run \`pnpm build\` and commit the result."
+            git --no-pager diff --stat -- dist .github/actions/local
+            exit 1
+          fi
+          echo "Committed bundles match a fresh build."
+
+  schema-freshness:
+    name: schema freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup runtime
+        uses: savvy-web/silk-runtime-action@v1
+        with:
+          install-deps: "true"
+
+      # Belt to the drift test's braces: the suite asserts the committed schema
+      # matches its Effect Schema source, and this proves the GENERATOR agrees —
+      # a generator that could no longer run at all would leave the drift test
+      # green right up until someone needed to regenerate.
+      - name: Regenerate the published JSON Schema
+        run: pnpm schema:generate
+
+      - name: Fail if the committed schema is stale
+        run: |
+          if ! git diff --quiet --exit-code -- schemas; then
+            echo "::error::schemas/ is out of date. Run \`pnpm schema:generate\` and commit the result."
+            git --no-pager diff -- schemas
+            exit 1
+          fi
+          echo "Committed schema matches a fresh generation."

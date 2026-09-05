@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { assert, describe, it } from "@effect/vitest";
 import { Effect } from "effect";
 import { OUTPUT_NAMES, emitOutputs, initialOutputs } from "../../../src/schema/outputs.js";
+import { RESULT_SCHEMA_URL } from "../../../src/schema/result.js";
 import { actionOutputsTestLayer } from "../../utils/doubles.js";
 
 /**
@@ -50,7 +51,14 @@ describe("emitOutputs", () => {
 			yield* emitOutputs(initialOutputs).pipe(Effect.provide(actionOutputsTestLayer(recording)));
 			const byName = new Map(recording.sets.map((entry) => [entry.name, entry.value]));
 			assert.strictEqual(byName.get("greeting"), "");
-			assert.strictEqual(byName.get("summary-written"), "false");
+			// The structured output is recorded ENCODED, exactly as the runner
+			// would see it — a JSON string, not the in-memory object.
+			assert.deepStrictEqual(JSON.parse(byName.get("result") ?? "null"), {
+				$schema: RESULT_SCHEMA_URL,
+				greeting: "",
+				summaryWritten: false,
+				dryRun: false,
+			});
 		}),
 	);
 });

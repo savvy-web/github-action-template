@@ -41,6 +41,7 @@ export const resultLines = (outputs: OutputsModel): ReadonlyArray<string> => [
 	"Result:",
 	`  greeting: ${outputs.greeting}`,
 	`  summary-written: ${outputs.summaryWritten}`,
+	`  dry-run: ${outputs.dryRun}`,
 ];
 
 /**

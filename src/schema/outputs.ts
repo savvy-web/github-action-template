@@ -1,6 +1,7 @@
 import type { ActionOutputError } from "@effected/github-actions";
 import { ActionOutputs } from "@effected/github-actions";
 import { Effect } from "effect";
+import { RunResult, toRunResult } from "./result.js";
 
 /**
  * The `action.yml` output names, verbatim, as a const tuple.
@@ -10,7 +11,7 @@ import { Effect } from "effect";
  * records what {@link emitOutputs} actually writes, and both must equal this
  * list.
  */
-export const OUTPUT_NAMES = ["greeting", "summary-written"] as const;
+export const OUTPUT_NAMES = ["greeting", "result"] as const;
 
 /**
  * A single `action.yml` output name.
@@ -19,10 +20,18 @@ export type OutputName = (typeof OUTPUT_NAMES)[number];
 
 /**
  * The fully-typed shape of all `action.yml` outputs.
+ *
+ * @remarks
+ * This is the action's INTERNAL model, not its published contract: the
+ * structured `result` output is `schema/result.ts`'s {@link RunResult}, and
+ * `toRunResult` is the one projection between them. Keeping the two apart is
+ * what lets this model change shape without moving a contract downstream
+ * consumers pin.
  */
 export interface OutputsModel {
 	readonly greeting: string;
 	readonly summaryWritten: boolean;
+	readonly dryRun: boolean;
 }
 
 /**
@@ -30,27 +39,29 @@ export interface OutputsModel {
  * contributes.
  *
  * @remarks
- * The pipeline FOLDS step results over this baseline, so a step that did not
- * run reports its default rather than being absent — and the failure path
- * emits exactly this value, so downstream steps always see every declared
- * output.
+ * Emitted FIRST, before any work — see `program.ts` — so every declared output
+ * has a value even if the run aborts in `readInputs`. The pipeline then FOLDS
+ * step results over this baseline, so a step that did not run reports its
+ * default rather than being absent.
  */
 export const initialOutputs: OutputsModel = {
 	greeting: "",
 	summaryWritten: false,
+	dryRun: false,
 };
 
 /**
- * Publishes every `action.yml` output exactly once, via `ActionOutputs.set`.
+ * Publishes every `action.yml` output exactly once.
  *
  * @remarks
- * Called on every exit path — success emits the folded model, failure emits
- * {@link initialOutputs} — so a consuming workflow can always read every
- * declared output. Booleans render with `String(v)` (`"true"` / `"false"`).
+ * `greeting` is a flat string via `set`; `result` is the structured contract
+ * via `setJson`, which takes the schema as its ENCODER — the same `RunResult`
+ * value `lib/scripts/generate-schema.ts` publishes a JSON Schema document
+ * from, so the emitted payload and the committed document cannot disagree.
  */
 export const emitOutputs = (model: OutputsModel): Effect.Effect<void, ActionOutputError, ActionOutputs> =>
 	Effect.gen(function* () {
 		const outputs = yield* ActionOutputs;
 		yield* outputs.set("greeting", model.greeting);
-		yield* outputs.set("summary-written", String(model.summaryWritten));
+		yield* outputs.setJson("result", toRunResult(model), RunResult);
 	});

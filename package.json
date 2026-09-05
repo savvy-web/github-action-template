@@ -17,16 +17,19 @@
 	"scripts": {
 		"build": "turbo run build:prod --log-order=grouped",
 		"build:prod": "github-action-builder build",
+		"changeset": "changeset",
 		"ci:build": "CI=\"true\" turbo run build:prod --log-order=grouped --output-logs=full",
 		"ci:test": "CI=\"true\" vitest run --coverage",
 		"ci:version": "savvy changeset version && biome format --write .",
-		"claude": "claude --plugin-dir=../../spencerbeggs/effected/plugin",
+		"claude": "claude --plugin-dir=../../spencerbeggs/effected/plugins/claude-code",
 		"lint": "biome check --max-diagnostics=none",
 		"lint:fix": "biome check --write --max-diagnostics=none",
 		"lint:fix:unsafe": "biome check --write --unsafe --max-diagnostics=none",
 		"lint:md": "markdownlint-cli2 --config './lib/configs/.markdownlint-cli2.jsonc'",
 		"lint:md:fix": "markdownlint-cli2  --config './lib/configs/.markdownlint-cli2.jsonc' --fix",
 		"prepare": "husky",
+		"schema:check": "vitest run --coverage.enabled=false __test__/unit/generate-schema.test.ts",
+		"schema:generate": "tsx lib/scripts/generate-schema.ts",
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage",
 		"test:watch": "vitest --watch",
@@ -36,14 +39,16 @@
 	},
 	"dependencies": {
 		"@effect/platform-node": "catalog:effect",
-		"@effected/github-actions": "^0.9.2",
+		"@effected/github-actions": "catalog:effected",
 		"effect": "catalog:effect"
 	},
 	"devDependencies": {
 		"@effect/vitest": "catalog:effect",
+		"@effected/schemastore": "catalog:effected",
 		"@savvy-web/github-action-builder": "^2.2.8",
 		"@savvy-web/silk": "^3.10.1",
-		"@vitest-agent/plugin": "^2.4.7"
+		"@vitest-agent/plugin": "^2.4.7",
+		"tsx": "^4.23.13"
 	},
 	"packageManager": "pnpm@11.23.0+sha512.f00082e5b283a199b74e079da28d155c008fe232f44c8a06ea7ddfa014ecf719fc362f790ecc67b28106ddac2afb24c49a9a079159da560b2ce7d1e98efd11af",
 	"engines": {

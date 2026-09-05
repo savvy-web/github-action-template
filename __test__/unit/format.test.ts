@@ -41,10 +41,11 @@ describe("log blocks", () => {
 	});
 
 	it("closes with the result header and names every output", () => {
-		const lines = resultLines({ greeting: "Hello, world.", summaryWritten: true });
+		const lines = resultLines({ greeting: "Hello, world.", summaryWritten: true, dryRun: false });
 		assert.strictEqual(lines[0], "Result:");
 		assert.isTrue(lines.some((line) => line.includes("greeting: Hello, world.")));
 		assert.isTrue(lines.some((line) => line.includes("summary-written: true")));
+		assert.isTrue(lines.some((line) => line.includes("dry-run: false")));
 	});
 
 	it("renders the one SKIPPED shape", () => {

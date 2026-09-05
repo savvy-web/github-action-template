@@ -2,6 +2,7 @@ import { assert, describe, it } from "@effect/vitest";
 import { ActionInput, ActionLogger } from "@effected/github-actions";
 import { Effect, Exit, Layer } from "effect";
 import { program } from "../../src/program.js";
+import { RESULT_SCHEMA_URL } from "../../src/schema/result.js";
 import type { ActionOutputsRecording, ActionStateRecording, LogLine } from "../utils/doubles.js";
 import { actionOutputsTestLayer, actionStateTestLayer, captureLogger } from "../utils/doubles.js";
 
@@ -32,7 +33,15 @@ const runProgram = (env: Record<string, string>) =>
 	});
 
 const output = (recording: ActionOutputsRecording, name: string): string | undefined =>
-	recording.sets.find((entry) => entry.name === name)?.value;
+	recording.sets.filter((entry) => entry.name === name).at(-1)?.value;
+
+/** The decoded `result` payload from a recorded `setJson` write. */
+const resultPayload = (recording: ActionOutputsRecording, index = -1): Record<string, unknown> => {
+	const writes = recording.sets.filter((entry) => entry.name === "result");
+	const write = writes.at(index);
+	assert.isDefined(write, "no `result` output was published");
+	return JSON.parse(write.value) as Record<string, unknown>;
+};
 
 describe("program", () => {
 	it.effect("greets, saves state, publishes outputs and reports", () =>
@@ -46,7 +55,12 @@ describe("program", () => {
 			assert.isTrue(lines.some((line) => line.message.includes("Greeting composed: Hello, world.")));
 			// Outputs: the folded model.
 			assert.strictEqual(output(outputs, "greeting"), "Hello, world.");
-			assert.strictEqual(output(outputs, "summary-written"), "true");
+			assert.deepStrictEqual(resultPayload(outputs), {
+				$schema: RESULT_SCHEMA_URL,
+				greeting: "Hello, world.",
+				summaryWritten: true,
+				dryRun: false,
+			});
 			// Cross-phase state was saved under the declared key.
 			assert.isTrue(state.entries.has("startTime"));
 		}),
@@ -61,7 +75,7 @@ describe("program", () => {
 					line.message.includes("Step: Write job summary — SKIPPED: disabled by the write-summary input"),
 				),
 			);
-			assert.strictEqual(output(outputs, "summary-written"), "false");
+			assert.strictEqual(resultPayload(outputs).summaryWritten, false);
 		}),
 	);
 
@@ -70,8 +84,52 @@ describe("program", () => {
 			const { exit, outputs } = yield* runProgram({ "dry-run": "true" });
 			assert.isTrue(Exit.isSuccess(exit));
 			assert.strictEqual(outputs.summaries.length, 0);
-			assert.strictEqual(output(outputs, "summary-written"), "false");
-			assert.strictEqual(output(outputs, "greeting"), "Hello, world.");
+			assert.deepStrictEqual(resultPayload(outputs), {
+				$schema: RESULT_SCHEMA_URL,
+				greeting: "Hello, world.",
+				summaryWritten: false,
+				dryRun: true,
+			});
+		}),
+	);
+
+	it.effect("emits the all-disabled baseline BEFORE any work, not from a failure handler", () =>
+		Effect.gen(function* () {
+			const { exit, outputs } = yield* runProgram({});
+			assert.isTrue(Exit.isSuccess(exit));
+			// The ordering IS the contract (B10). Four writes: the baseline pair
+			// first, then the folded pair. A program that emitted the baseline
+			// from `Effect.onError` would record only the folded pair here — and
+			// would OVERWRITE it with the baseline on a later failure, publishing
+			// a false statement about work that actually happened.
+			assert.deepStrictEqual(
+				outputs.sets.map((entry) => entry.name),
+				["greeting", "result", "greeting", "result"],
+			);
+			assert.strictEqual(outputs.sets[0]?.value, "");
+			assert.deepStrictEqual(resultPayload(outputs, 0), {
+				$schema: RESULT_SCHEMA_URL,
+				greeting: "",
+				summaryWritten: false,
+				dryRun: false,
+			});
+		}),
+	);
+
+	it.effect("still emits every output when the run aborts inside readInputs itself", () =>
+		Effect.gen(function* () {
+			// A malformed boolean fails the `Config` DECODE — the earliest thing
+			// that can abort the run, and strictly before any validation this
+			// module controls. The baseline is on disk anyway, which no `onError`
+			// handler ordering could be relied on to guarantee.
+			const { exit, outputs } = yield* runProgram({ emphatic: "yes" });
+			assert.isTrue(Exit.isFailure(exit));
+			assert.deepStrictEqual(
+				outputs.sets.map((entry) => entry.name),
+				["greeting", "result"],
+			);
+			assert.strictEqual(output(outputs, "greeting"), "");
+			assert.strictEqual(resultPayload(outputs).greeting, "");
 		}),
 	);
 
@@ -79,9 +137,11 @@ describe("program", () => {
 		Effect.gen(function* () {
 			const { exit, outputs } = yield* runProgram({ name: "   " });
 			assert.isTrue(Exit.isFailure(exit));
-			// Outputs-on-every-abort-path: the all-disabled baseline is published.
+			// Outputs-on-every-abort-path: the baseline written up front stands,
+			// and nothing re-publishes it afterwards.
+			assert.strictEqual(outputs.sets.length, 2);
 			assert.strictEqual(output(outputs, "greeting"), "");
-			assert.strictEqual(output(outputs, "summary-written"), "false");
+			assert.strictEqual(resultPayload(outputs).summaryWritten, false);
 		}),
 	);
 });

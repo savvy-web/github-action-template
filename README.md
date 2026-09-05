@@ -19,15 +19,21 @@ Read [docs/01-getting-started.md](./docs/01-getting-started.md) for the skeleton
 ## Try it
 
 ```yaml
-- uses: your-org/your-action@v1
+- uses: savvy-web/github-action-template@main
   id: greet
   with:
     name: world
     emphatic: "true"
-- run: echo "${{ steps.greet.outputs.greeting }}"
+- run: |
+    echo "${{ steps.greet.outputs.greeting }}"
+    echo '${{ steps.greet.outputs.result }}' | jq -r .summaryWritten
 ```
 
-Inputs: `name`, `emphatic`, `write-summary`, `dry-run`. Outputs: `greeting`, `summary-written`. All declared — with their defaults — in [action.yml](./action.yml), which the code mirrors under test.
+Once you have made this template your own, that `uses:` becomes your repository and your release tag.
+
+Inputs: `name`, `emphatic`, `write-summary`, `dry-run`. Outputs: `greeting` (a scalar) and `result` (a structured JSON payload). All declared — with their defaults — in [action.yml](./action.yml), which the code mirrors under test.
+
+The `result` payload is a published contract, not an ad-hoc blob: it is generated from an Effect Schema into a committed, versioned JSON Schema document under [schemas/](./schemas), and a drift test fails the build if the two ever disagree. See [docs/04-output-schema.md](./docs/04-output-schema.md).
 
 ## Development
 

@@ -1,5 +1,5 @@
 import { AgentPlugin } from "@vitest-agent/plugin";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default async () => {
 	const { projects, tags } = await AgentPlugin.discover();
@@ -16,6 +16,10 @@ export default async () => {
 		test: {
 			...(projects ? { projects } : {}),
 			tags,
+			// `.repos/` holds read-only vendored upstream source (see /silk:repos).
+			// It ships hundreds of its own `*.test.ts` files that are not this
+			// repo's tests; vitest's defaults do not know about it.
+			exclude: [...configDefaults.exclude, "**/.repos/**"],
 			pool: "forks",
 			globalSetup: ["vitest.setup.ts"],
 			coverage: {
