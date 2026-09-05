@@ -4,8 +4,8 @@ Thank you for considering contributing to `@savvy-web/github-action-template`. T
 
 ## Prerequisites
 
-- **Node.js** 24.11.0 (see `devEngines` in `package.json`)
-- **pnpm** 10.28.2 (enforced via `packageManager` field)
+- **Node.js** >= 24.11.0 (`engines` in `package.json`); the dev container pins 26.7.0 (`devEngines`)
+- **pnpm** 11.23.0 (enforced via `packageManager` field)
 - **Git** with commit signing configured (recommended)
 
 ## Setup
@@ -14,7 +14,15 @@ Thank you for considering contributing to `@savvy-web/github-action-template`. T
 git clone https://github.com/savvy-web/github-action-template.git
 cd github-action-template
 pnpm install
+pnpm exec savvy repos sync
 ```
+
+`savvy repos sync` materializes `.repos/` — read-only vendored upstream source
+(currently `effect`, pinned to the version this repo installs). A plain clone
+leaves those submodules empty, and a GitHub tarball download cannot carry them
+at all. The trees are checked out filesystem-read-only on purpose: read them,
+never edit them, and re-pin with `pnpm exec savvy repos pin` in the same commit
+as the dependency bump that made the pin stale.
 
 ## Development Commands
 
@@ -29,10 +37,12 @@ pnpm install
 | `pnpm typecheck` | Run TypeScript type checking via Turbo |
 | `pnpm lint:md` | Lint markdown files |
 | `pnpm validate` | Validate GitHub Action metadata |
+| `pnpm changeset` | Write a changeset describing your change |
+| `pnpm exec savvy repos sync` | Materialize the vendored `.repos/` sources |
 
 ## Code Quality Standards
 
-- **Formatter:** Biome 2.3.14 -- tabs, 120-character line width
+- **Formatter:** Biome 2.5.12 -- tabs, 120-character line width
 - **Linting:** Biome with strict rules including `noImportCycles`, `useExplicitType` for exports, and `useNodejsImportProtocol`
 - **TypeScript:** Strict mode, ES2022 target, bundler module resolution
 - **Testing:** Vitest with 85% coverage thresholds (per-file)

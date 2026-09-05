@@ -1,5 +1,5 @@
 import { assert, describe, it } from "@effect/vitest";
-import { ActionOutputError, ActionOutputs, DryRun } from "@effected/github-actions";
+import { ActionOutputs, DryRun, RunnerFileWriteError } from "@effected/github-actions";
 import { Effect, Layer } from "effect";
 import { initialOutputs } from "../../../src/schema/outputs.js";
 import { writeSummary } from "../../../src/steps/write-summary.js";
@@ -60,8 +60,11 @@ describe("writeSummary", () => {
 	it.effect("degrades a failed write to a warning instead of failing the job", () =>
 		Effect.gen(function* () {
 			const lines: Array<LogLine> = [];
+			// `ActionOutputError` is a UNION ALIAS, not a class: the kit ships one
+			// tagged class per failure, so a double fails with the specific arm.
+			// Match on `_tag`, never a `reason` field — that shape is gone.
 			const failingOutputs = ActionOutputs.layerTest({
-				summary: () => Effect.fail(new ActionOutputError({ reason: "writeFailed", file: "GITHUB_STEP_SUMMARY" })),
+				summary: () => Effect.fail(new RunnerFileWriteError({ file: "GITHUB_STEP_SUMMARY" })),
 			});
 			const result = yield* writeSummary({ inputs, outputs }).pipe(
 				Effect.provide(Layer.mergeAll(failingOutputs, DryRun.layerFrom(false), captureLogger(lines))),

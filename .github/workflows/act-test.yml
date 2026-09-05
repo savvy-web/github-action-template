@@ -8,6 +8,10 @@ permissions:
 # The local smoke loop: run the committed persistLocal bundle
 # (.github/actions/local) without publishing anything. Runnable on a laptop
 # with `act` (see .actrc) or from the Actions tab.
+#
+# The bundle it runs is COMMITTED, and the Test workflow's dist-freshness gate
+# is what keeps it honest — this job would otherwise smoke-test whatever was
+# last committed rather than what src/ says today.
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -22,7 +26,12 @@ jobs:
       - name: Assert outputs
         env:
           GREETING: ${{ steps.demo.outputs.greeting }}
-          SUMMARY_WRITTEN: ${{ steps.demo.outputs.summary-written }}
+          RESULT: ${{ steps.demo.outputs.result }}
         run: |
           test "$GREETING" = "Hello, act!"
-          test "$SUMMARY_WRITTEN" = "true"
+          # The structured output is JSON: assert on the parsed payload, and on
+          # the `$schema` stamp that tells a consumer which document validates it.
+          echo "$RESULT" | jq -e '.greeting == "Hello, act!"'
+          echo "$RESULT" | jq -e '.summaryWritten == true'
+          echo "$RESULT" | jq -e '.dryRun == false'
+          echo "$RESULT" | jq -e '.["$schema"] | endswith(".json")'

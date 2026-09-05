@@ -161,7 +161,7 @@ install_deps "$PM"
 if command -v claude >/dev/null 2>&1; then
 	echo "Registering Claude Code plugin marketplaces..."
 	claude plugin marketplace add anthropics/claude-plugins-official
-	claude plugin marketplace add spencerbeggs/bot
+	claude plugin marketplace add spencerbeggs/effected
 	claude plugin marketplace add savvy-web/systems
 else
 	echo "Claude CLI not found; skipping plugin marketplace registration."

@@ -12,7 +12,9 @@ This template is a **working** GitHub Action built on the [`@effected`](https://
 | `src/steps/` | One module per step: a result type, a tagged error with a `reason` union **when the step can fail**, an explicit `R`. |
 | `src/layers/app.ts` | Only what `Action.run`'s default runtime omits. Config-dependent layers take decided values (`makeAppLayer(dryRun)`). |
 | `src/schema/inputs.ts` | `INPUT_NAMES` + `readInputs`: decoded once, validated once, tested separately. |
-| `src/schema/outputs.ts` | `OUTPUT_NAMES` + the all-disabled baseline + `emitOutputs` (every output exactly once, on every exit path). |
+| `src/schema/outputs.ts` | `OUTPUT_NAMES` + the all-disabled baseline + `emitOutputs` (every output exactly once; the baseline is written **before any work**). |
+| `src/schema/result.ts` | The structured `result` output's published contract: one `Schema.Class`, a pure projection, and the versioned schema URL. |
+| `lib/scripts/generate-schema.ts` | Generates the committed JSON Schema for `result` from that same class, gated before it writes. See [the output-schema chapter](./04-output-schema.md). |
 | `src/state.ts` | Cross-phase state as Schema classes with JSON-safe encoded forms. |
 | `src/format.ts` | The single rendering surface: every human-readable string, pure. |
 | `__test__/unit/` | `it.effect` + `assert` suites mirroring `src/`, plus the structural guards. |
@@ -21,10 +23,12 @@ This template is a **working** GitHub Action built on the [`@effected`](https://
 ## The loop
 
 ```sh
-pnpm install       # configDependencies provide the effect catalogs
-pnpm test          # vitest + strict coverage; the structural guards run here
-pnpm build         # turbo → types:check → github-action-builder → dist/ + .github/actions/local/
-pnpm validate      # builder sanity checks against action.yml
+pnpm install         # configDependencies provide the effect catalogs
+pnpm test            # vitest + strict coverage; the structural guards run here
+pnpm build           # turbo → types:check → github-action-builder → dist/ + .github/actions/local/
+pnpm validate        # builder sanity checks against action.yml
+pnpm schema:generate # regenerate schemas/ from src/schema/result.ts
+pnpm schema:check    # the drift guard, on its own
 ```
 
 `dist/` and `.github/actions/local/` are **committed**: the runner executes those files, and the `Test` workflow's dist-freshness job rebuilds and diffs them so a stale bundle cannot merge. The `Local Test` workflow (or `act`, preconfigured in `.actrc`) runs the committed local bundle without publishing anything.
@@ -33,8 +37,9 @@ pnpm validate      # builder sanity checks against action.yml
 
 1. **Freeze the I/O contract first.** Edit `action.yml`, then let the failing sync tests walk you through `schema/inputs.ts` and `schema/outputs.ts`. Prefer line-list inputs; reach for a JSON input only for genuinely nested structure — and then publish its schema (the `effected` plugin's skills cover this).
 2. **Add a step per concern** under `src/steps/`, deciding its failure posture at design time: fail the job, degrade to a warning (see `write-summary.ts`), or double-net it (see `post.ts`). An error class exists only if the step constructs it.
-3. **Keep every rendered string in `format.ts`** and every skipped step logging `Step: X — SKIPPED: <reason>` — the program suite asserts on the log stream.
-4. **Add services to `makeAppLayer`** only when the default runtime doesn't already provide them.
-5. Need GitHub App credentials? Follow [the App-auth chapter](./02-github-app-auth.md).
+3. **Publish structured output through one schema.** `src/schema/result.ts` is both the `setJson` encoder and the source the committed JSON Schema is generated from; never write a second shape for the document. See [the output-schema chapter](./04-output-schema.md).
+4. **Keep every rendered string in `format.ts`** and every skipped step logging `Step: X — SKIPPED: <reason>` — the program suite asserts on the log stream.
+5. **Add services to `makeAppLayer`** only when the default runtime doesn't already provide them — and keep `__test__/unit/layers/app.test.ts` green: it is a compile-time, two-sided proof that neither the layer nor the program requires anything `Action.run` does not supply.
+6. Need GitHub App credentials? Follow [the App-auth chapter](./02-github-app-auth.md).
 
 The [effected Claude Code plugin](https://github.com/spencerbeggs/effected) is enabled by default in `.claude/settings.json`; its `building-a-github-action` skill routes every capability question (cache, artifacts, check runs, publishing, attestation) to the right `@effected` package, and `designing-an-action` sequences a full build.
