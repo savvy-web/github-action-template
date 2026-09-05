@@ -118,9 +118,10 @@ export class RunResult extends Schema.Class<RunResult>("RunResult")(fields) {}
  * `SchemaTarget` exposes no document or annotation override, so lowering from
  * the annotated struct is the only route to a document that describes itself.
  *
- * Tracked upstream; when a class's annotations reach its encoded definition,
- * this can collapse back into {@link RunResult} and the target can name the
- * class again.
+ * Upstream: spencerbeggs/effected#606. Removal is tracked in
+ * savvy-web/github-action-template#94 — when a class's annotations reach its
+ * encoded definition, this collapses back into {@link RunResult} and the target
+ * names the class again (a contract change, so it needs a version bump).
  */
 export const RunResultDocument = Schema.Struct(fields).annotate({
 	title: "Action run result",
