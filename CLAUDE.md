@@ -29,7 +29,7 @@ If it does not appear, the skills below are absent and the guidance in this file
 - `dist/` + `.github/actions/local/` — **committed** bundles; the runner executes these, and the `Test` workflow rebuilds and diffs them (dist freshness). Never hand-edit.
 - `lib/scripts/generate-schema.ts` + `schemas/<version>/` — the JSON Schema for the `result` output and the committed document it emits. The script gates on `SchemaPipeline.check` before writing; the artifact is **generated, never hand-edited**, and `__test__/unit/generate-schema.test.ts` imports the script's own exported `targets` to pin it.
 - `docs/` — getting started, the optional GitHub App auth module, the bundler forensic notes, and the output-schema contract.
-- `.repos/` — read-only vendored upstream source, pinned to the version this repo installs (`effect` at `effect@4.0.0-rc.109`). Never edit it; the tree is filesystem-locked. Read it to settle what v4 actually exports, and re-pin it in the SAME commit as any `effect` catalog bump (`/silk:repos`).
+- `.repos/` — read-only vendored upstream source, pinned to the version this repo installs (`effect` at `effect@4.0.0-rc.115`). Never edit it; the tree is filesystem-locked. Read it to settle what v4 actually exports, and re-pin it in the SAME commit as any `effect` catalog bump (`/silk:repos`).
 
 ## Commands
 
@@ -51,6 +51,6 @@ If it does not appear, the skills below are absent and the guidance in this file
 
 ## Shim register
 
-Local stand-ins for kit surfaces that were checked and found absent live in `src/shims/<contract>.ts`, one module per missing contract. **Currently empty — re-audited construct-by-construct against `@effected/github-actions@0.10.2` (2026-09-04); the kit covers everything this template uses.** Restamp this claim with the version and date at every kit bump; an unstamped "currently empty" is the fossil this register exists to prevent.
+Local stand-ins for kit surfaces that were checked and found absent live in `src/shims/<contract>.ts`, one module per missing contract. **Currently empty — re-audited construct-by-construct against `@effected/github-actions@0.12.0` (2026-09-13); the kit covers everything this template uses.** Restamp this claim with the version and date at every kit bump; an unstamped "currently empty" is the fossil this register exists to prevent.
 
 Each shim's header must record: the surfaces checked absent and at which kit versions, the tracking issue, and the removal condition. Protocol when you spot code that belongs upstream in `@effected/*`: **ask the user** whether to dogfood the change upstream now or shim it here — and either way file an issue in `spencerbeggs/effected` plus a linked tracking ticket in this repo. Re-audit this register (and every kit-surface claim in comments and docs) on every `@effected/*` version bump; a fossilized "the kit doesn't ship X" comment is the recorded failure mode.

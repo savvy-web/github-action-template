@@ -80,6 +80,15 @@ export const targets: ReadonlyArray<SchemaTarget> = [
 		name: RESULT_SCHEMA_NAME,
 		version: SCHEMA_SEMVER,
 		path: resolve(REPO_ROOT, "schemas", SCHEMA_SEMVER, SchemaVersioning.fileName(RESULT_SCHEMA_NAME, SCHEMA_SEMVER)),
+		// The published document is a CLOSED object (`additionalProperties:
+		// false`): the payload is exactly what `RunResult` encodes, and a
+		// consumer must not be told an unknown key is valid. Core's
+		// `toJsonSchemaDocument` default flipped to `"ignore"` (open objects) in
+		// effect rc.113; pinning the option on the target keeps the generation
+		// contract self-describing rather than dependent on core's default —
+		// which is exactly the drift the version gate below would otherwise
+		// report as a contract change against an already-published file.
+		jsonSchema: { onExcessProperty: "error" },
 	}),
 ];
 
