@@ -54,6 +54,7 @@ jobs:
             @effected/*
             @savvy-web/*
             @vitest-agent/*
+            @okfit/*
             ajv
           run: |
             pnpm savvy init
