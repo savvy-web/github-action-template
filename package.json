@@ -44,10 +44,10 @@
 	"devDependencies": {
 		"@effect/vitest": "catalog:effect",
 		"@effected/schemastore": "catalog:effected",
-		"@okfit/plugin": "^0.3.3",
-		"@savvy-web/github-action-builder": "^2.3.7",
-		"@savvy-web/silk": "^4.0.4",
-		"@vitest-agent/plugin": "^4.0.1",
+		"@okfit/plugin": "^0.4.3",
+		"@savvy-web/github-action-builder": "^2.4.3",
+		"@savvy-web/silk": "^4.2.3",
+		"@vitest-agent/plugin": "^4.1.2",
 		"tsx": "catalog:silk"
 	},
 	"engines": {
