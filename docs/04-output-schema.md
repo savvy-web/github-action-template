@@ -23,7 +23,7 @@ pnpm schema:generate   # regenerate schemas/ and commit the result
 pnpm schema:check      # the drift guard on its own (also runs in `pnpm test`)
 ```
 
-Everything between "an Effect Schema" and "a committed file" belongs to [`@effected/schemastore`](https://github.com/spencerbeggs/effected/tree/main/packages/schemastore): `SchemaPipeline.run` is the whole generate → lint → validate → gate → write sequence, and `SchemaValidator.layer` is a real ajv strict-mode engine the package ships. This repository writes the target manifest and the log wording, and nothing else — a hand-rolled Draft-07 lowering is how a repo ends up maintaining a JSON Schema engine it did not mean to write.
+Everything between "an Effect Schema" and "a committed file" belongs to [`@effected/schemastore`](https://github.com/spencerbeggs/effected/tree/main/packages/schemastore): `SchemaPipeline.run` is the whole generate → lint → validate → gate → write sequence, and the validation engine is [`@effected/schemastore-cli`](https://github.com/spencerbeggs/effected/tree/main/packages/schemastore-cli)'s `AjvValidator.layer` — ajv in strict mode, provided at the edge of the generator (the library ships only the `SchemaValidator` contract, so ajv stays out of anything that imports it at runtime). This repository writes the target manifest and the log wording, and nothing else — a hand-rolled Draft-07 lowering is how a repo ends up maintaining a JSON Schema engine it did not mean to write.
 
 ## Two rules that are not style
 
