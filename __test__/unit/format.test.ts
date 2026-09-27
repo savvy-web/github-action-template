@@ -1,6 +1,7 @@
 import { assert, describe, it } from "@effect/vitest";
 import {
 	buildSummaryPanel,
+	formatDecodedInputs,
 	formatDurationLine,
 	formatGreeting,
 	formatSkipped,
@@ -9,15 +10,20 @@ import {
 } from "../../src/format.js";
 import { initialOutputs } from "../../src/schema/outputs.js";
 
-const inputs = { name: "world", emphatic: false, writeSummary: true, dryRun: false };
+const inputs = { name: "world", guests: [], emphatic: false, writeSummary: true, dryRun: false };
 
 describe("formatGreeting", () => {
 	it("renders the plain greeting", () => {
-		assert.strictEqual(formatGreeting("world", false), "Hello, world.");
+		assert.strictEqual(formatGreeting("world", [], false), "Hello, world.");
 	});
 
 	it("renders the emphatic greeting", () => {
-		assert.strictEqual(formatGreeting("world", true), "Hello, world!");
+		assert.strictEqual(formatGreeting("world", [], true), "Hello, world!");
+	});
+
+	it("greets guests as prose: one, then a serial list", () => {
+		assert.strictEqual(formatGreeting("world", ["Ada"], false), "Hello, world and Ada.");
+		assert.strictEqual(formatGreeting("world", ["Ada", "Grace"], true), "Hello, world, Ada and Grace!");
 	});
 });
 
@@ -25,7 +31,7 @@ describe("buildSummaryPanel", () => {
 	it("carries the same rendered greeting the log line shows", () => {
 		// The single-rendering-surface invariant: panel cell and log line both
 		// come from formatGreeting, so they cannot disagree.
-		const greeting = formatGreeting("panel", true);
+		const greeting = formatGreeting("panel", [], true);
 		const panel = buildSummaryPanel({ ...initialOutputs, greeting });
 		assert.include(panel, greeting);
 		assert.include(panel, "Greeting Report");
@@ -37,6 +43,8 @@ describe("log blocks", () => {
 		const lines = runContextLines(inputs);
 		assert.strictEqual(lines[0], "Run context:");
 		assert.isTrue(lines.some((line) => line.includes("name: world")));
+		assert.isTrue(lines.some((line) => line.includes("guests: (none)")));
+		assert.isTrue(runContextLines({ ...inputs, guests: ["Ada", "Grace"] }).includes("  guests: Ada, Grace"));
 		assert.isTrue(lines.some((line) => line.includes("dry-run: false")));
 	});
 
@@ -50,6 +58,13 @@ describe("log blocks", () => {
 
 	it("renders the one SKIPPED shape", () => {
 		assert.strictEqual(formatSkipped("Write job summary", "disabled"), "Step: Write job summary — SKIPPED: disabled");
+	});
+
+	it("renders the decoded inputs for the debug log", () => {
+		assert.strictEqual(
+			formatDecodedInputs(inputs),
+			'Decoded inputs: {"name":"world","guests":[],"emphatic":false,"writeSummary":true,"dryRun":false}',
+		);
 	});
 
 	it("renders the duration in seconds", () => {

@@ -30,7 +30,7 @@ export interface GreetResult {
  */
 export const greet = (inputs: Inputs): Effect.Effect<GreetResult> =>
 	Effect.gen(function* () {
-		const greeting = formatGreeting(inputs.name, inputs.emphatic);
+		const greeting = formatGreeting(inputs.name, inputs.guests, inputs.emphatic);
 		yield* Effect.logInfo(`Greeting composed: ${greeting}`);
 		return { greeting };
 	});

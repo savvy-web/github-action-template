@@ -4,7 +4,7 @@
 	"tasks": {
 		"build:prod": {
 			"cache": true,
-			"dependsOn": ["types:check"],
+			"dependsOn": ["types:check", "schema:build"],
 			"inputs": [
 				"$TURBO_DEFAULT$",
 				"$TURBO_ROOT$/package.json",
@@ -21,6 +21,12 @@
 			],
 			"outputLogs": "full",
 			"outputs": ["dist/**"]
+		},
+		"schema:build": {
+			"cache": false,
+			"dependsOn": [],
+			"outputLogs": "full",
+			"outputs": ["schemas/**"]
 		},
 		"types:check": {
 			"cache": true,

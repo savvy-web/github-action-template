@@ -16,16 +16,23 @@
  * @module program
  */
 
-import type { ActionOutputError, ActionOutputs, ActionStateError, DryRun } from "@effected/github-actions";
+import type {
+	ActionEnvironment,
+	ActionOutputError,
+	ActionOutputs,
+	ActionStateError,
+	DryRun,
+} from "@effected/github-actions";
 import { ActionLogger, ActionState } from "@effected/github-actions";
 import type { Config } from "effect";
-import { Effect } from "effect";
-import { resultLines, runContextLines } from "./format.js";
+import { Clock, Effect } from "effect";
+import { formatDecodedInputs, resultLines, runContextLines } from "./format.js";
 import { makeAppLayer } from "./layers/app.js";
 import type { InputError, Inputs } from "./schema/inputs.js";
 import { readInputs } from "./schema/inputs.js";
 import type { OutputsModel } from "./schema/outputs.js";
 import { emitOutputs, initialOutputs } from "./schema/outputs.js";
+import { withStepDebug } from "./shims/step-debug.js";
 import { STATE_KEYS, StartTimeState } from "./state.js";
 import { greet } from "./steps/greet.js";
 import { writeSummary } from "./steps/write-summary.js";
@@ -75,11 +82,15 @@ const pipeline = (inputs: Inputs): Effect.Effect<OutputsModel, never, ActionLogg
  *
  * Failure still fails the effect — never `setFailed`-and-return — so the job's
  * verdict comes from the error channel, rendered by `Action.run`.
+ *
+ * The whole phase runs under `withStepDebug` (a tracked shim, see
+ * `shims/step-debug.ts`): with the runner's step debugging on, every
+ * `Effect.logDebug` below reaches the log as `::debug::`; off, it is filtered.
  */
 export const program: Effect.Effect<
 	void,
 	InputError | Config.ConfigError | ActionStateError | ActionOutputError,
-	ActionLogger | ActionOutputs | ActionState
+	ActionEnvironment | ActionLogger | ActionOutputs | ActionState
 > = Effect.gen(function* () {
 	// The all-disabled baseline, BEFORE any work — including before the inputs
 	// are read. See the remarks above for why this is not an `onError` handler.
@@ -87,6 +98,7 @@ export const program: Effect.Effect<
 
 	const inputs = yield* readInputs;
 	const state = yield* ActionState;
+	yield* Effect.logDebug(formatDecodedInputs(inputs));
 
 	// Run-context block: what this run was asked to do, before any work.
 	for (const line of runContextLines(inputs)) {
@@ -94,7 +106,9 @@ export const program: Effect.Effect<
 	}
 
 	// Cross-phase state: `post` reports duration from this.
-	yield* state.save(STATE_KEYS.startTime, new StartTimeState({ startedAt: Date.now() }), StartTimeState);
+	// Through `Clock`, never `Date.now()`: time is a service, so a test can pin it.
+	const startedAt = yield* Clock.currentTimeMillis;
+	yield* state.save(STATE_KEYS.startTime, new StartTimeState({ startedAt }), StartTimeState);
 
 	const outputs = yield* pipeline(inputs).pipe(Effect.provide(makeAppLayer(inputs.dryRun)));
 
@@ -104,4 +118,4 @@ export const program: Effect.Effect<
 	for (const line of resultLines(outputs)) {
 		yield* Effect.logInfo(line);
 	}
-});
+}).pipe(withStepDebug);

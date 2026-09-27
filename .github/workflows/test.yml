@@ -93,18 +93,10 @@ jobs:
         with:
           install-deps: "true"
 
-      # Belt to the drift test's braces: the suite asserts the committed schema
-      # matches its Effect Schema source, and this proves the GENERATOR agrees —
-      # a generator that could no longer run at all would leave the drift test
-      # green right up until someone needed to regenerate.
-      - name: Regenerate the published JSON Schema
-        run: pnpm schema:generate
-
-      - name: Fail if the committed schema is stale
-        run: |
-          if ! git diff --quiet --exit-code -- schemas; then
-            echo "::error::schemas/ is out of date. Run \`pnpm schema:generate\` and commit the result."
-            git --no-pager diff -- schemas
-            exit 1
-          fi
-          echo "Committed schema matches a fresh generation."
+      # `schemastore check` is the identical walk to `schemastore build` with no
+      # writes. It exits 1 when a build would write anything (a stale or missing
+      # document), when a published label's contract drifted (bump the version,
+      # never force), or when the ajv strict gate or structural lint fails —
+      # and it appends a report table to the job's step summary.
+      - name: Check the published JSON Schema
+        run: pnpm schema:check

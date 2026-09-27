@@ -19,30 +19,33 @@ claude plugin marketplace add spencerbeggs/effected   # once, if not already reg
 claude plugin list                                    # `effected@spencerbeggs` must appear enabled
 ```
 
-If it does not appear, the skills below are absent and the guidance in this file has no backing — fix the plugin before building. Working against a local checkout of the plugin instead: `pnpm claude`, which passes `--plugin-dir=../../spencerbeggs/effected/plugins/claude-code`.
+If it does not appear, the skills below are absent and the guidance in this file has no backing — fix the plugin before building. Working against a local checkout of the plugin instead: `pnpm claude` (a `package.json` script) runs `claude --plugin-dir=../../spencerbeggs/effected/plugins/claude-code`, which expects the `effected` checkout at that path relative to this repo.
 
 ## Layout
 
-- `action.yml` — the single source of input/output names AND defaults. Code mirrors it; `__test__/unit/schema/*.test.ts` enforce the mirror three ways (declared ↔ tuple ↔ actually-read).
-- `src/` — entry points (`main.ts`, `post.ts`, guard + `Action.run` only), `program.ts` (pure composition), `steps/` (one module per step), `layers/app.ts`, `schema/` (`inputs.ts`, `outputs.ts`, and `result.ts` — the published `result` output contract), `state.ts`, `format.ts` (every rendered string). Conventions: `src/CLAUDE.md`.
-- `__test__/` — `unit/` mirrors `src/`; `utils/` holds recording doubles (not tests). Conventions: `__test__/CLAUDE.md`.
+- `action.yml` — the single source of input/output names AND defaults. Code mirrors it; `__test__/unit/schema/*.test.ts` enforce the mirror (declared ↔ tuple ↔ actually-read, and the runner-shaped environment decoding to exactly the code's own defaults) through `__test__/utils/manifest.ts`.
+- `src/` — entry points (`main.ts`, `post.ts`, guard + `Action.run` only), `program.ts` (pure composition), `steps/` (one module per step), `layers/app.ts`, `schema/` (`inputs.ts`, `outputs.ts`, and `result.ts` — the published `result` output contract and its `HostedSchema` identity), `shims/` (see the register below), `state.ts`, `format.ts` (every rendered string). Conventions: `src/CLAUDE.md`.
+- `__test__/` — `unit/` mirrors `src/`; `integration/bundle.int.test.ts` runs the committed `dist/` as a runner would; `utils/` holds recording doubles, the manifest decoder and the runner-file harness (not tests). Conventions: `__test__/CLAUDE.md`.
 - `dist/` + `.github/actions/local/` — **committed** bundles; the runner executes these, and the `Test` workflow rebuilds and diffs them (dist freshness). Never hand-edit.
-- `lib/scripts/generate-schema.ts` + `schemas/<version>/` — the JSON Schema for the `result` output and the committed document it emits. The script gates on `SchemaPipeline.check` before writing; the artifact is **generated, never hand-edited**, and `__test__/unit/generate-schema.test.ts` imports the script's own exported `targets` to pin it.
+- `schemastore.config.ts` + `schemas/<version>/` — the JSON Schema for the `result` output and the committed document the `schemastore` command (`@effected/schemastore-cli`) emits from it. The entry is `hosted:` the same `RunResultIdentity` the payload stamps into `$schema`, so `$id`, path and URL derive from one value. It ships `published: false` (regenerates in place) — **flip it to `true` at the first real release**; from then a contract change is refused until a version is appended to the identity. The artifact is **generated, never hand-edited**. `pnpm schema:check` is the freshness gate in CI — this repo does not re-test the kit.
+- `.github/workflows/act-test.yml` (`Local Test`) — the self-dogfood loop: on every pull request the action runs itself from `.github/actions/local` on a real runner (main and post, a real run and a rehearsal with `guests`), and each `result` payload is validated against the committed document its `$schema` names.
 - `docs/` — getting started, the optional GitHub App auth module, the bundler forensic notes, and the output-schema contract.
 - `.repos/` — read-only vendored upstream source, pinned to the version this repo installs (`effect` at `effect@4.0.0-rc.117`). Never edit it; the tree is filesystem-locked. Read it to settle what v4 actually exports, and re-pin it in the SAME commit as any `effect` catalog bump (`/silk:repos`).
 
 ## Commands
 
-- `pnpm test` — vitest (`it.effect` + `assert`, strict coverage). Read the `Tests:` line, not the exit code, when scoping a subset.
-- `pnpm build` — turbo: `types:check` then `github-action-builder build` → `dist/` and `.github/actions/local/`. Never run the builder directly outside turbo.
+- `pnpm test` — vitest (`it.effect` + `assert`, strict coverage), unit AND integration. The integration suite runs the committed `dist/`, so after a source change run `pnpm build` first. Read the `Tests:` line, not the exit code, when scoping a subset.
+- `pnpm build` — turbo: `types:check` and `schema:build`, then `github-action-builder build` → `dist/` and `.github/actions/local/`. Never run the builder directly outside turbo.
+- `pnpm local [input=value …] [--debug]` — run the built `dist/` main then post over temp runner files (every declared input present, defaults from `action.yml`) and print outputs and the job summary. Same harness as the integration test (`__test__/utils/runner.ts`).
 - `pnpm validate` — builder checks against `action.yml`.
-- `pnpm schema:generate` / `pnpm schema:check` — regenerate the committed `result` schema (gated: aborts on a contract change until the version label and `$id` move together), and run the drift test over the generator's exported `targets`.
+- `pnpm schema:build` / `pnpm schema:check` — `schemastore build` regenerates the committed `result` schema (content-compared; once `published: true`, a contract change is refused, exit 1, until the next label is appended to `RunResultIdentity`'s `versions` — the old label stays as a frozen file); `schemastore check` is the same walk with no writes and fails whenever a build would write anything — the CI schema-freshness gate. `pnpm build` runs `schema:build` first via turbo. Never `--force` a published schema.
+- `pnpm claude` — Claude Code against a local checkout of the effected plugin (see above).
 - `pnpm lint` / `lint:fix` / `lint:md` — Biome and markdownlint via the silk presets.
 
 ## Repo-specific rules
 
-- **Entry idiom is uniform**: `if (process.env.GITHUB_ACTIONS) { await Action.run(...) }` with a `v8 ignore` comment, on every entry file. Those guards (plus `vitest.setup.ts`, which strips `GITHUB_ACTIONS`/`INPUT_*`/`STATE_*` so CI test processes stay hermetic) are the only sanctioned ambient `process.env` reads — everything else goes through `ActionEnvironment`.
-- **`action.yml` owns names and defaults.** Change inputs/outputs there first, then follow the failing sync tests.
+- **Entry idiom is uniform**: `if (process.env.GITHUB_ACTIONS) { await Action.run(...) }` with a `v8 ignore` comment, on every entry file. Those guards (plus `vitest.setup.ts`, which strips `GITHUB_ACTIONS`/`INPUT_*`/`STATE_*` so CI test processes stay hermetic) are the only sanctioned ambient `process.env` reads in `src/` — everything else goes through `ActionEnvironment`. (The runner harness in `__test__/utils/runner.ts` inherits only `PATH`/`HOME`/`SystemRoot` into the processes it spawns, so ambient runner variables never leak into a bundle run.)
+- **`action.yml` owns names and defaults.** Change inputs/outputs there first, then follow the failing sync tests — the defaults are enforced too. Tests arrange inputs RUNNER-SHAPED (`runnerInputs` from `__test__/utils/manifest.ts`: every declared input present, carrying its manifest default or `""`), never an empty `ActionInput.layer({})`, which is a state no runner produces.
 - **An error class exists only if src constructs it**, and each step decides its failure posture at design time (fail-the-job / degrade-to-warning / double-netted). `post` never fails the workflow.
 - **Dependency honesty is tested**: every `dependencies` entry must be imported by `src/` or peer-required by one that is (`__test__/unit/structure.test.ts` resolves the peer closure). Add a dep only with its import.
 - **Outputs are emitted before any work.** `program.ts` writes the full baseline as its first statement, never from an `Effect.onError` handler — a failure handler that re-emits the baseline overwrites an output describing work that actually happened. A step whose result must survive a later failure emits its own output as soon as it lands.
@@ -51,6 +54,11 @@ If it does not appear, the skills below are absent and the guidance in this file
 
 ## Shim register
 
-Local stand-ins for kit surfaces that were checked and found absent live in `src/shims/<contract>.ts`, one module per missing contract. **Currently empty — re-audited construct-by-construct against `@effected/github-actions@0.17.0` (2026-09-27); the kit covers everything this template uses.** Restamp this claim with the version and date at every kit bump; an unstamped "currently empty" is the fossil this register exists to prevent.
+Local stand-ins for kit surfaces that were checked and found absent live in `src/shims/<contract>.ts`, one module per missing contract. **Audited against `@effected/github-actions@0.17.0` and `@effected/schemastore@0.15.2` (2026-09-27).** Restamp with the version and date at every kit bump; an unstamped register is the fossil it exists to prevent.
+
+| Shim | Stands in for | Upstream / tracking | Remove when |
+| --- | --- | --- | --- |
+| `src/shims/step-debug.ts` | step debugging (`RUNNER_DEBUG`) lowering `References.MinimumLogLevel` to `Debug` — `Action.run`/`ActionLogger` read `isDebug` into nothing | [effected#853](https://github.com/spencerbeggs/effected/issues/853) / [#113](https://github.com/savvy-web/github-action-template/issues/113) | `Action.run` (or `ActionLogger`) handles step-debug levels itself |
+| `__test__/utils/manifest.ts` (test-side) | an `ActionManifest` decode of `action.yml` plus a runner-shaped input environment for tests | [effected#856](https://github.com/spencerbeggs/effected/issues/856) / [#112](https://github.com/savvy-web/github-action-template/issues/112) | `@effected/github-actions` ships `ActionManifest` (decode + runner-shaped test env) |
 
 Each shim's header must record: the surfaces checked absent and at which kit versions, the tracking issue, and the removal condition. Protocol when you spot code that belongs upstream in `@effected/*`: **ask the user** whether to dogfood the change upstream now or shim it here — and either way file an issue in `spencerbeggs/effected` plus a linked tracking ticket in this repo. Re-audit this register (and every kit-surface claim in comments and docs) on every `@effected/*` version bump; a fossilized "the kit doesn't ship X" comment is the recorded failure mode.

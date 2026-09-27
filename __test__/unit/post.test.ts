@@ -1,15 +1,18 @@
 import { assert, describe, it } from "@effect/vitest";
-import { ActionState } from "@effected/github-actions";
+import { ActionEnvironment, ActionState } from "@effected/github-actions";
 import { Effect, Exit, Layer, Schema } from "effect";
+import { TestClock } from "effect/testing";
 import { post } from "../../src/post.js";
 import { StartTimeState } from "../../src/state.js";
 import type { ActionStateRecording, LogLine } from "../utils/doubles.js";
 import { actionStateTestLayer, captureLogger } from "../utils/doubles.js";
 
-const runPost = (state: Layer.Layer<ActionState>) =>
+const runPost = (state: Layer.Layer<ActionState>, runner: Record<string, string> = {}) =>
 	Effect.gen(function* () {
 		const lines: Array<LogLine> = [];
-		const exit = yield* Effect.exit(post.pipe(Effect.provide(Layer.mergeAll(state, captureLogger(lines)))));
+		const exit = yield* Effect.exit(
+			post.pipe(Effect.provide(Layer.mergeAll(state, ActionEnvironment.layerTest(runner), captureLogger(lines)))),
+		);
 		return { exit, lines };
 	});
 
@@ -18,13 +21,13 @@ describe("post", () => {
 		Effect.gen(function* () {
 			const recording: ActionStateRecording = { entries: new Map() };
 			// Seed the store the way main writes it: the schema's encoded JSON.
-			const encoded = yield* Schema.encodeUnknownEffect(StartTimeState)(
-				StartTimeState.make({ startedAt: Date.now() - 1500 }),
-			);
+			// `main` read the clock at the epoch; post runs 1.5s later.
+			const encoded = yield* Schema.encodeUnknownEffect(StartTimeState)(StartTimeState.make({ startedAt: 0 }));
 			recording.entries.set("startTime", JSON.stringify(encoded));
+			yield* TestClock.adjust("1500 millis");
 			const { exit, lines } = yield* runPost(actionStateTestLayer(recording));
 			assert.isTrue(Exit.isSuccess(exit));
-			assert.isTrue(lines.some((line) => line.message.includes("Action completed in")));
+			assert.isTrue(lines.some((line) => line.message === "Action completed in 1.50s"));
 		}),
 	);
 
@@ -33,6 +36,16 @@ describe("post", () => {
 			const { exit, lines } = yield* runPost(actionStateTestLayer({ entries: new Map() }));
 			assert.isTrue(Exit.isSuccess(exit));
 			assert.isFalse(lines.some((line) => line.message.includes("Action completed in")));
+		}),
+	);
+
+	it.effect("surfaces debug logs only in step-debug mode", () =>
+		Effect.gen(function* () {
+			const isPostDebug = (line: LogLine) => line.level === "Debug" && line.message === "Running post-action script";
+			const debug = yield* runPost(actionStateTestLayer({ entries: new Map() }), { RUNNER_DEBUG: "1" });
+			assert.isTrue(debug.lines.some(isPostDebug));
+			const quiet = yield* runPost(actionStateTestLayer({ entries: new Map() }));
+			assert.isFalse(quiet.lines.some(isPostDebug));
 		}),
 	);
 

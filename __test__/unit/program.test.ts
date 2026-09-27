@@ -1,17 +1,24 @@
 import { assert, describe, it } from "@effect/vitest";
-import { ActionInput, ActionLogger } from "@effected/github-actions";
+import { ActionEnvironment, ActionInput, ActionLogger } from "@effected/github-actions";
 import { Effect, Exit, Layer } from "effect";
 import { program } from "../../src/program.js";
-import { RESULT_SCHEMA_URL } from "../../src/schema/result.js";
+import { RunResultIdentity } from "../../src/schema/result.js";
 import type { ActionOutputsRecording, ActionStateRecording, LogLine } from "../utils/doubles.js";
 import { actionOutputsTestLayer, actionStateTestLayer, captureLogger } from "../utils/doubles.js";
+import { runnerInputs } from "../utils/manifest.js";
 
 /**
  * One full run of `program` over test layers, capturing the log stream and
  * every published output. The log IS the decision record, so most assertions
  * here are on `lines`.
+ *
+ * @remarks
+ * Inputs arrive RUNNER-SHAPED: every input `action.yml` declares is present,
+ * carrying the workflow-supplied value or its manifest default (or `""`) —
+ * never an empty record, which is a state no runner produces. `runner` seeds
+ * the runner's own environment (`RUNNER_DEBUG`, …).
  */
-const runProgram = (env: Record<string, string>) =>
+const runProgram = (supplied: Record<string, string>, runner: Record<string, string> = {}) =>
 	Effect.gen(function* () {
 		const outputs: ActionOutputsRecording = { sets: [], summaries: [] };
 		const state: ActionStateRecording = { entries: new Map() };
@@ -20,7 +27,8 @@ const runProgram = (env: Record<string, string>) =>
 			program.pipe(
 				Effect.provide(
 					Layer.mergeAll(
-						ActionInput.layer(env),
+						ActionInput.layer(runnerInputs(supplied)),
+						ActionEnvironment.layerTest(runner),
 						ActionLogger.layerTest(),
 						actionOutputsTestLayer(outputs),
 						actionStateTestLayer(state),
@@ -56,13 +64,36 @@ describe("program", () => {
 			// Outputs: the folded model.
 			assert.strictEqual(output(outputs, "greeting"), "Hello, world.");
 			assert.deepStrictEqual(resultPayload(outputs), {
-				$schema: RESULT_SCHEMA_URL,
+				$schema: RunResultIdentity.$id,
 				greeting: "Hello, world.",
 				summaryWritten: true,
 				dryRun: false,
 			});
 			// Cross-phase state was saved under the declared key.
 			assert.isTrue(state.entries.has("startTime"));
+		}),
+	);
+
+	it.effect("greets every guest from the line-list input", () =>
+		Effect.gen(function* () {
+			const { exit, outputs, lines } = yield* runProgram({ guests: "- Ada\n- Grace\n" });
+			assert.isTrue(Exit.isSuccess(exit));
+			assert.strictEqual(output(outputs, "greeting"), "Hello, world, Ada and Grace.");
+			assert.isTrue(lines.some((line) => line.message === "  guests: Ada, Grace"));
+		}),
+	);
+
+	it.effect("surfaces debug logs only when the runner is in step-debug mode", () =>
+		Effect.gen(function* () {
+			const isDecodedInputs = (line: LogLine) => line.level === "Debug" && line.message.startsWith("Decoded inputs:");
+			const debug = yield* runProgram({}, { RUNNER_DEBUG: "1" });
+			assert.isTrue(Exit.isSuccess(debug.exit));
+			assert.isTrue(debug.lines.some(isDecodedInputs), "step debug on: the debug line must reach the log");
+			const quiet = yield* runProgram({});
+			assert.isTrue(Exit.isSuccess(quiet.exit));
+			// The control: the same program, the same line, filtered at Info.
+			assert.isFalse(quiet.lines.some(isDecodedInputs), "step debug off: the debug line must be filtered");
+			assert.isTrue(quiet.lines.some((line) => line.message.includes("Run context:")));
 		}),
 	);
 
@@ -85,7 +116,7 @@ describe("program", () => {
 			assert.isTrue(Exit.isSuccess(exit));
 			assert.strictEqual(outputs.summaries.length, 0);
 			assert.deepStrictEqual(resultPayload(outputs), {
-				$schema: RESULT_SCHEMA_URL,
+				$schema: RunResultIdentity.$id,
 				greeting: "Hello, world.",
 				summaryWritten: false,
 				dryRun: true,
@@ -108,7 +139,7 @@ describe("program", () => {
 			);
 			assert.strictEqual(outputs.sets[0]?.value, "");
 			assert.deepStrictEqual(resultPayload(outputs, 0), {
-				$schema: RESULT_SCHEMA_URL,
+				$schema: RunResultIdentity.$id,
 				greeting: "",
 				summaryWritten: false,
 				dryRun: false,

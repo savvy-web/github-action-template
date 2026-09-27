@@ -1,13 +1,27 @@
 name: Local Test
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# The local smoke loop: run the committed persistLocal bundle
-# (.github/actions/local) without publishing anything. Runnable on a laptop
-# with `act` (see .actrc) or from the Actions tab.
+concurrency:
+  group: local-test-${{ github.ref }}
+  cancel-in-progress: true
+
+# The self-dogfood loop: the action runs ITSELF, from the committed
+# persistLocal bundle (.github/actions/local), on a real runner. Runnable on a
+# laptop with `act` (see .actrc) or from the Actions tab, and on every pull
+# request.
+#
+# The unit suite runs src/ and the bundle-truth integration test runs dist/
+# over a simulated runner; this is the only check that the built action runs
+# on a REAL one. Each `uses:` step also registers the action's post phase,
+# which the runner executes at the end of the job ("Post Run ..." in the log);
+# post never fails the workflow by design, so its duration line is read from
+# the log rather than asserted here.
 #
 # The bundle it runs is COMMITTED, and the Test workflow's dist-freshness gate
 # is what keeps it honest — this job would otherwise smoke-test whatever was
@@ -15,23 +29,55 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+
       - name: Run the local action
         id: demo
         uses: ./.github/actions/local
         with:
           name: act
           emphatic: "true"
+
+      - name: Run the local action as a rehearsal with guests
+        id: rehearsal
+        uses: ./.github/actions/local
+        with:
+          name: act
+          guests: |
+            - Ada
+            # a comment line, ignored
+            - Grace
+          dry-run: "true"
+
       - name: Assert outputs
         env:
           GREETING: ${{ steps.demo.outputs.greeting }}
           RESULT: ${{ steps.demo.outputs.result }}
+          REHEARSAL: ${{ steps.rehearsal.outputs.result }}
         run: |
           test "$GREETING" = "Hello, act!"
-          # The structured output is JSON: assert on the parsed payload, and on
-          # the `$schema` stamp that tells a consumer which document validates it.
+          # The structured output is JSON: assert on the parsed payload.
           echo "$RESULT" | jq -e '.greeting == "Hello, act!"'
           echo "$RESULT" | jq -e '.summaryWritten == true'
           echo "$RESULT" | jq -e '.dryRun == false'
-          echo "$RESULT" | jq -e '.["$schema"] | endswith(".json")'
+          echo "$REHEARSAL" | jq -e '.greeting == "Hello, act, Ada and Grace."'
+          echo "$REHEARSAL" | jq -e '.summaryWritten == false and .dryRun == true'
+
+      # Validate each payload against the document it names in `$schema`, read
+      # from THIS checkout — so a payload naming a document nobody committed,
+      # or a committed document the payload no longer satisfies, fails here.
+      - name: Validate the result payloads against the committed schema
+        env:
+          RESULT: ${{ steps.demo.outputs.result }}
+          REHEARSAL: ${{ steps.rehearsal.outputs.result }}
+        run: |
+          for payload in "$RESULT" "$REHEARSAL"; do
+            url="$(echo "$payload" | jq -r '.["$schema"]')"
+            # https://raw.githubusercontent.com/<owner>/<repo>/<ref>/<path> -> <path>
+            document="$(echo "$url" | sed -E 's#^https://raw\.githubusercontent\.com/[^/]+/[^/]+/[^/]+/##')"
+            test -f "$document" || { echo "::error::\$schema names $url, but $document is not committed"; exit 1; }
+            echo "$payload" > "$RUNNER_TEMP/result.json"
+            pipx run check-jsonschema --schemafile "$document" "$RUNNER_TEMP/result.json"
+          done

@@ -1,31 +1,13 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { assert, describe, it } from "@effect/vitest";
 import { Effect } from "effect";
 import { OUTPUT_NAMES, emitOutputs, initialOutputs } from "../../../src/schema/outputs.js";
-import { RESULT_SCHEMA_URL } from "../../../src/schema/result.js";
+import { RunResultIdentity } from "../../../src/schema/result.js";
 import { actionOutputsTestLayer } from "../../utils/doubles.js";
-
-/**
- * The output names declared in `action.yml`, read from the file itself — the
- * same real-parse guard the inputs suite uses.
- */
-const declaredOutputNames = (): ReadonlyArray<string> => {
-	const source = readFileSync(fileURLToPath(new URL("../../../action.yml", import.meta.url)), "utf8");
-	const lines = source.split("\n");
-	const start = lines.indexOf("outputs:");
-	const names: Array<string> = [];
-	for (const line of lines.slice(start + 1)) {
-		if (/^\S/.test(line)) break;
-		const match = /^ {2}([A-Za-z0-9-]+):\s*$/.exec(line);
-		if (match?.[1] !== undefined) names.push(match[1]);
-	}
-	return names;
-};
+import { readManifest } from "../../utils/manifest.js";
 
 describe("OUTPUT_NAMES", () => {
 	it("matches the outputs action.yml declares", () => {
-		assert.deepStrictEqual([...OUTPUT_NAMES].sort(), [...declaredOutputNames()].sort());
+		assert.deepStrictEqual([...OUTPUT_NAMES].sort(), [...readManifest().outputs].sort());
 	});
 });
 
@@ -54,7 +36,7 @@ describe("emitOutputs", () => {
 			// The structured output is recorded ENCODED, exactly as the runner
 			// would see it — a JSON string, not the in-memory object.
 			assert.deepStrictEqual(JSON.parse(byName.get("result") ?? "null"), {
-				$schema: RESULT_SCHEMA_URL,
+				$schema: RunResultIdentity.$id,
 				greeting: "",
 				summaryWritten: false,
 				dryRun: false,

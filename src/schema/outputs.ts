@@ -56,7 +56,7 @@ export const initialOutputs: OutputsModel = {
  * @remarks
  * `greeting` is a flat string via `set`; `result` is the structured contract
  * via `setJson`, which takes the schema as its ENCODER — the same `RunResult`
- * value `lib/scripts/generate-schema.ts` publishes a JSON Schema document
+ * value `schemastore.config.ts` publishes a JSON Schema document
  * from, so the emitted payload and the committed document cannot disagree.
  */
 export const emitOutputs = (model: OutputsModel): Effect.Effect<void, ActionOutputError, ActionOutputs> =>

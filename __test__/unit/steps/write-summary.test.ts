@@ -6,7 +6,7 @@ import { writeSummary } from "../../../src/steps/write-summary.js";
 import type { ActionOutputsRecording, LogLine } from "../../utils/doubles.js";
 import { actionOutputsTestLayer, captureLogger } from "../../utils/doubles.js";
 
-const inputs = { name: "world", emphatic: false, writeSummary: true, dryRun: false };
+const inputs = { name: "world", guests: [], emphatic: false, writeSummary: true, dryRun: false };
 const outputs = { ...initialOutputs, greeting: "Hello, world." };
 
 const emptyRecording = (): ActionOutputsRecording => ({ sets: [], summaries: [] });

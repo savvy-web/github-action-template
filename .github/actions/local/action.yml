@@ -6,12 +6,18 @@ branding:
 inputs:
   # This file is the single source of truth for input NAMES and DEFAULTS.
   # `src/schema/inputs.ts` mirrors both, and `__test__/unit/schema/inputs.test.ts`
-  # asserts the two never drift: it parses this file, records what the code
-  # actually reads, and compares both against the INPUT_NAMES tuple.
+  # asserts the two never drift: it decodes this file (`__test__/utils/manifest.ts`),
+  # records what the code actually reads, compares both against the INPUT_NAMES
+  # tuple, and decodes the runner-shaped environment (every input present, with
+  # its default below or "") to the same values the code's own defaults give.
   name:
     description: Who to greet. Must not be blank.
     required: false
     default: world
+  guests:
+    description: >-
+      More people to greet, as a list — one per line, comma-separated, a `- ` bullet list, or a JSON array; `#` comment lines are ignored. Omit to greet only `name`.
+    required: false
   emphatic:
     description: Whether to greet with an exclamation mark (true | false).
     required: false

@@ -10,7 +10,7 @@ import { Config, Data, Effect } from "effect";
  * `action.yml` for real, records what {@link readInputs} actually asks the
  * config provider for, and both must equal this list.
  */
-export const INPUT_NAMES = ["name", "emphatic", "write-summary", "dry-run"] as const;
+export const INPUT_NAMES = ["name", "guests", "emphatic", "write-summary", "dry-run"] as const;
 
 /**
  * A single `action.yml` input name.
@@ -22,6 +22,11 @@ export type InputName = (typeof INPUT_NAMES)[number];
  */
 export interface Inputs {
 	readonly name: string;
+	/**
+	 * More people to greet — the template's line-list input. Empty when the
+	 * workflow supplied none.
+	 */
+	readonly guests: ReadonlyArray<string>;
 	readonly emphatic: boolean;
 	readonly writeSummary: boolean;
 	readonly dryRun: boolean;
@@ -47,10 +52,19 @@ export class InputError extends Data.TaggedError("InputError")<{
  *
  * @remarks
  * Defaults mirror `action.yml` — that file is the single source of truth,
- * and the sync test keeps this mirror honest.
+ * and the sync test keeps this mirror honest: the runner-shaped environment
+ * (every input present, carrying its manifest default or `""`) must decode to
+ * exactly what these fallbacks produce.
+ *
+ * `guests` is the line-list shape: `ActionInput.list` accepts one-per-line,
+ * comma-separated, `- ` bullets or a JSON array, dropping `#` comment lines
+ * and blanks. `action.yml` declares no default, so the runner publishes `""`
+ * when a workflow omits it — which reads as absent, so `Config.withDefault([])`
+ * is load-bearing rather than decorative.
  */
 const loadInputs: Config.Config<Inputs> = Config.all({
 	name: ActionInput.string("name").pipe(Config.withDefault("world")),
+	guests: ActionInput.list("guests").pipe(Config.withDefault<ReadonlyArray<string>>([])),
 	emphatic: ActionInput.boolean("emphatic").pipe(Config.withDefault(false)),
 	writeSummary: ActionInput.boolean("write-summary").pipe(Config.withDefault(true)),
 	dryRun: ActionInput.boolean("dry-run").pipe(Config.withDefault(false)),

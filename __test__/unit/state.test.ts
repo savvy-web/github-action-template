@@ -4,6 +4,7 @@ import { ActionEnvironment, ActionOutputs, ActionState } from "@effected/github-
 import type { Schema } from "effect";
 import { Effect, FileSystem, Layer, Option } from "effect";
 import { STATE_KEYS, StartTimeState } from "../../src/state.js";
+import { parseRunnerFile } from "../utils/runner.js";
 
 /**
  * `ActionState.layer` — the REAL one — pointed at a state file (the `main`
@@ -26,25 +27,11 @@ const realState = (env: Record<string, string>): Layer.Layer<ActionState> =>
 
 /**
  * What the runner does between phases: parse the `GITHUB_STATE` file's
- * heredoc-framed entries and republish each as a `STATE_<key>` variable.
+ * heredoc-framed entries (the shared runner-file parser the bundle harness
+ * uses) and republish each as a `STATE_<key>` variable.
  */
-const republish = (raw: string): Record<string, string> => {
-	const lines = raw.split("\n");
-	const env: Record<string, string> = {};
-	for (let index = 0; index < lines.length; index++) {
-		const header = /^(.+?)<<(.+)$/.exec(lines[index] ?? "");
-		if (header === null) continue;
-		const [, key, delimiter] = header as unknown as [string, string, string];
-		const body: Array<string> = [];
-		index++;
-		while (index < lines.length && lines[index] !== delimiter) {
-			body.push(lines[index] ?? "");
-			index++;
-		}
-		env[`STATE_${key}`] = body.join("\n");
-	}
-	return env;
-};
+const republish = (raw: string): Record<string, string> =>
+	Object.fromEntries(Object.entries(parseRunnerFile(raw)).map(([key, value]) => [`STATE_${key}`, value]));
 
 /**
  * A full `main` → runner → `post` trip: save through the real service into a

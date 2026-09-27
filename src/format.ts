@@ -17,9 +17,16 @@ import type { Inputs } from "./schema/inputs.js";
 import type { OutputsModel } from "./schema/outputs.js";
 
 /**
+ * Joins names as prose: `a`, `a and b`, `a, b and c`.
+ */
+const joinNames = (names: ReadonlyArray<string>): string =>
+	names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+
+/**
  * The greeting, rendered once for every surface that shows it.
  */
-export const formatGreeting = (name: string, emphatic: boolean): string => `Hello, ${name}${emphatic ? "!" : "."}`;
+export const formatGreeting = (name: string, guests: ReadonlyArray<string>, emphatic: boolean): string =>
+	`Hello, ${joinNames([name, ...guests])}${emphatic ? "!" : "."}`;
 
 /**
  * The run-context block: what this run was asked to do, logged before any
@@ -28,6 +35,7 @@ export const formatGreeting = (name: string, emphatic: boolean): string => `Hell
 export const runContextLines = (inputs: Inputs): ReadonlyArray<string> => [
 	"Run context:",
 	`  name: ${inputs.name}`,
+	`  guests: ${inputs.guests.length === 0 ? "(none)" : inputs.guests.join(", ")}`,
 	`  emphatic: ${inputs.emphatic}`,
 	`  write-summary: ${inputs.writeSummary}`,
 	`  dry-run: ${inputs.dryRun}`,
@@ -64,6 +72,12 @@ export const buildSummaryPanel = (outputs: OutputsModel): string =>
 		GitHubMarkdown.heading("Greeting Report"),
 		GitHubMarkdown.table(["Fact", "Value"], [["Greeting", GitHubMarkdown.code(outputs.greeting)]]),
 	].join("\n\n");
+
+/**
+ * The decoded inputs, at debug level only: visible when a workflow re-runs
+ * with step debugging on, silent otherwise.
+ */
+export const formatDecodedInputs = (inputs: Inputs): string => `Decoded inputs: ${JSON.stringify(inputs)}`;
 
 /**
  * The post-phase duration line.
