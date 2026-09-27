@@ -31,7 +31,9 @@ import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { NodeServices } from "@effect/platform-node";
-import { SchemaFile, SchemaPipeline, SchemaTarget, SchemaValidator, SchemaVersioning } from "@effected/schemastore";
+import type { SchemaValidator } from "@effected/schemastore";
+import { SchemaFile, SchemaPipeline, SchemaTarget, SchemaVersioning } from "@effected/schemastore";
+import { AjvValidator } from "@effected/schemastore-cli";
 import { Effect, Layer, Result } from "effect";
 import {
 	RESULT_SCHEMA_NAME,
@@ -98,12 +100,15 @@ export const targets: ReadonlyArray<SchemaTarget> = [
  * @remarks
  * Exported for the same reason {@link targets} is: a test that rebuilds the
  * layer can pass while the generator runs against a different one.
- * `SchemaValidator.layer` is a real ajv engine the package ships — there is no
- * adapter for this repo to write.
+ * `@effected/schemastore` ships only the `SchemaValidator` contract and its
+ * doubles; the one real engine — ajv strict mode, the same verdict the
+ * `schemastore` command gives — is `AjvValidator.layer` from
+ * `@effected/schemastore-cli`, which keeps ajv out of any runtime import of
+ * the library. There is still no adapter for this repo to write.
  */
 export const AppLayer: Layer.Layer<SchemaFile | SchemaValidator> = Layer.mergeAll(
 	SchemaFile.layer,
-	SchemaValidator.layer,
+	AjvValidator.layer,
 ).pipe(Layer.provide(NodeServices.layer));
 
 const generate = Effect.gen(function* () {
