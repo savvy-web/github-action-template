@@ -48,9 +48,9 @@
 		"@effect/vitest": "catalog:effect",
 		"@effected/schemastore-cli": "catalog:effected",
 		"@effected/yaml": "catalog:effected",
-		"@okfit/plugin": "^0.5.27",
-		"@savvy-web/github-action-builder": "^2.4.23",
-		"@savvy-web/silk": "^4.5.4",
+		"@okfit/plugin": "^0.5.29",
+		"@savvy-web/github-action-builder": "^2.4.25",
+		"@savvy-web/silk": "^4.5.6",
 		"@vitest-agent/plugin": "^5.6.2"
 	},
 	"engines": {
@@ -59,13 +59,13 @@
 	"devEngines": {
 		"packageManager": {
 			"name": "pnpm",
-			"version": "12.16.1",
+			"version": "12.17.0",
 			"onFail": "download"
 		},
 		"runtime": [
 			{
 				"name": "node",
-				"version": "26.12.1",
+				"version": "26.13.0",
 				"onFail": "ignore"
 			}
 		]
