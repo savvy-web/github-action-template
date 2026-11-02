@@ -38,6 +38,7 @@ import { defineConfig } from "@effected/schemastore";
 import { RunResult, RunResultIdentity } from "./src/schema/result.js";
 
 export default defineConfig({
+	name: RunResultIdentity.name,
 	outputDir: "schemas",
 	schemas: {
 		[RunResultIdentity.name]: {

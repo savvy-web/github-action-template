@@ -11,21 +11,19 @@
  * @module post
  */
 
-import type { ActionEnvironment } from "@effected/github-actions";
 import { Action, ActionState } from "@effected/github-actions";
 import { Clock, Effect, Option } from "effect";
 import { formatDurationLine } from "./format.js";
-import { withStepDebug } from "./shims/step-debug.js";
 import { STATE_KEYS, StartTimeState } from "./state.js";
 
 /**
  * The post-phase program, exported for tests.
  *
  * @remarks
- * Runs under `withStepDebug` (see `shims/step-debug.ts`) INSIDE the double
- * net, so the level wiring is covered by the same never-fail guarantee.
+ * `Action.run` lowers the minimum log level to `Debug` under the runner's step
+ * debugging, so the `logDebug` lines below surface only when someone asked.
  */
-export const post: Effect.Effect<void, never, ActionEnvironment | ActionState> = Effect.gen(function* () {
+export const post: Effect.Effect<void, never, ActionState> = Effect.gen(function* () {
 	const state = yield* ActionState;
 	yield* Effect.logDebug("Running post-action script");
 
@@ -37,7 +35,6 @@ export const post: Effect.Effect<void, never, ActionEnvironment | ActionState> =
 		yield* Effect.logDebug("No start time recorded; skipping the duration report");
 	}
 }).pipe(
-	withStepDebug,
 	// Double net: a typed failure OR a defect in post demotes to a warning.
 	Effect.catch((error) => Effect.logWarning(`Post-action warning: ${String(error)}`)),
 	Effect.catchDefect((defect) => Effect.logWarning(`Post-action warning: ${String(defect)}`)),

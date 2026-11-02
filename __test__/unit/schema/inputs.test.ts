@@ -1,31 +1,14 @@
 import { assert, describe, it } from "@effect/vitest";
-import { ActionInput } from "@effected/github-actions";
+import { ActionInput, ActionManifest } from "@effected/github-actions";
 import { Effect } from "effect";
 import { INPUT_NAMES, readInputs } from "../../../src/schema/inputs.js";
-import { readManifest, runnerInputs } from "../../utils/manifest.js";
+import { readActionManifest } from "../../utils/runner.js";
 
-/**
- * An `ActionInput` environment that records every input name looked up.
- *
- * @remarks
- * Every value reads as absent while the set of names asked for is captured.
- * The provider is dual-accept (`INPUT_`-mangled first, then verbatim), so
- * repeated prefixes are stripped rather than counted: the assertion is about
- * which INPUTS are read, not how many spellings the provider tries.
- */
-const recordingEnv = (seen: Set<string>): Record<string, string> =>
-	new Proxy({} as Record<string, string>, {
-		get: (_target, property) => {
-			if (typeof property === "string" && property.startsWith("INPUT_")) {
-				seen.add(property.replace(/^(?:INPUT_)+/, "").toLowerCase());
-			}
-			return undefined;
-		},
-	});
+const manifest = readActionManifest();
 
 /** `readInputs` over a runner-shaped environment with `supplied` overrides. */
 const readAsRunner = (supplied: Readonly<Record<string, string>> = {}) =>
-	readInputs.pipe(Effect.provide(ActionInput.layer(runnerInputs(supplied))));
+	readInputs.pipe(Effect.provide(ActionInput.layer(ActionManifest.runnerInputs(manifest, supplied))));
 
 describe("readInputs", () => {
 	it.effect("decodes the manifest defaults the runner publishes for an unsupplied run", () =>
@@ -95,18 +78,23 @@ describe("readInputs", () => {
 
 describe("action.yml mirror", () => {
 	it("INPUT_NAMES matches the inputs action.yml declares", () => {
-		const declared = readManifest().inputs.map((input) => input.name);
+		const declared = Object.keys(manifest.inputs ?? {});
 		assert.deepStrictEqual([...INPUT_NAMES].sort(), [...declared].sort());
 	});
 
-	it.effect("INPUT_NAMES is exactly the set readInputs reads", () =>
+	it.effect("readInputs reads exactly the inputs action.yml declares, and INPUT_NAMES names them", () =>
 		Effect.gen(function* () {
-			const seen = new Set<string>();
-			yield* readInputs.pipe(Effect.provide(ActionInput.layer(recordingEnv(seen))));
-			// Guard against the spread/ownKeys false green: an empty recording
-			// compared with an empty expectation proves nothing.
-			assert.isAbove(seen.size, 0, "the recorder saw no reads");
-			assert.deepStrictEqual([...seen].sort(), [...INPUT_NAMES].sort());
+			// The kit's recorder journals every input lookup over the runner-shaped
+			// environment; `ActionManifest.diff` matches them by runner variable.
+			const recording = ActionInput.recording(ActionManifest.runnerInputs(manifest));
+			yield* readInputs.pipe(Effect.provide(recording.layer));
+			const read = yield* recording.names;
+			// Guard against a false green: an empty recording compared with an
+			// empty expectation proves nothing.
+			assert.isAbove(read.length, 0, "the recorder saw no reads");
+			const diff = ActionManifest.diff(manifest, { inputs: read });
+			assert.isTrue(diff.inSync, JSON.stringify(diff));
+			assert.deepStrictEqual([...read].sort(), [...INPUT_NAMES].sort());
 		}),
 	);
 

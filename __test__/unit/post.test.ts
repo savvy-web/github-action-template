@@ -1,17 +1,25 @@
 import { assert, describe, it } from "@effect/vitest";
-import { ActionEnvironment, ActionState } from "@effected/github-actions";
-import { Effect, Exit, Layer, Schema } from "effect";
+import { ActionState } from "@effected/github-actions";
+import type { LogLevel } from "effect";
+import { Effect, Exit, Layer, References, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { post } from "../../src/post.js";
 import { StartTimeState } from "../../src/state.js";
 import type { ActionStateRecording, LogLine } from "../utils/doubles.js";
 import { actionStateTestLayer, captureLogger } from "../utils/doubles.js";
 
-const runPost = (state: Layer.Layer<ActionState>, runner: Record<string, string> = {}) =>
+/**
+ * One run of `post` over test layers. `minimumLogLevel` stands in for
+ * `Action.run`, which lowers it to `Debug` under the runner's step debugging.
+ */
+const runPost = (state: Layer.Layer<ActionState>, minimumLogLevel: LogLevel.LogLevel = "Info") =>
 	Effect.gen(function* () {
 		const lines: Array<LogLine> = [];
 		const exit = yield* Effect.exit(
-			post.pipe(Effect.provide(Layer.mergeAll(state, ActionEnvironment.layerTest(runner), captureLogger(lines)))),
+			post.pipe(
+				Effect.provide(Layer.mergeAll(state, captureLogger(lines))),
+				Effect.provideService(References.MinimumLogLevel, minimumLogLevel),
+			),
 		);
 		return { exit, lines };
 	});
@@ -39,10 +47,10 @@ describe("post", () => {
 		}),
 	);
 
-	it.effect("surfaces debug logs only in step-debug mode", () =>
+	it.effect("logs at Debug, filtered at the default Info level", () =>
 		Effect.gen(function* () {
 			const isPostDebug = (line: LogLine) => line.level === "Debug" && line.message === "Running post-action script";
-			const debug = yield* runPost(actionStateTestLayer({ entries: new Map() }), { RUNNER_DEBUG: "1" });
+			const debug = yield* runPost(actionStateTestLayer({ entries: new Map() }), "Debug");
 			assert.isTrue(debug.lines.some(isPostDebug));
 			const quiet = yield* runPost(actionStateTestLayer({ entries: new Map() }));
 			assert.isFalse(quiet.lines.some(isPostDebug));

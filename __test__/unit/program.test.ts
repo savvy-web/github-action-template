@@ -1,11 +1,14 @@
 import { assert, describe, it } from "@effect/vitest";
-import { ActionEnvironment, ActionInput, ActionLogger } from "@effected/github-actions";
-import { Effect, Exit, Layer } from "effect";
+import { ActionInput, ActionLogger, ActionManifest } from "@effected/github-actions";
+import type { LogLevel } from "effect";
+import { Effect, Exit, Layer, References } from "effect";
 import { program } from "../../src/program.js";
 import { RunResultIdentity } from "../../src/schema/result.js";
 import type { ActionOutputsRecording, ActionStateRecording, LogLine } from "../utils/doubles.js";
 import { actionOutputsTestLayer, actionStateTestLayer, captureLogger } from "../utils/doubles.js";
-import { runnerInputs } from "../utils/manifest.js";
+import { readActionManifest } from "../utils/runner.js";
+
+const manifest = readActionManifest();
 
 /**
  * One full run of `program` over test layers, capturing the log stream and
@@ -15,10 +18,11 @@ import { runnerInputs } from "../utils/manifest.js";
  * @remarks
  * Inputs arrive RUNNER-SHAPED: every input `action.yml` declares is present,
  * carrying the workflow-supplied value or its manifest default (or `""`) —
- * never an empty record, which is a state no runner produces. `runner` seeds
- * the runner's own environment (`RUNNER_DEBUG`, …).
+ * never an empty record, which is a state no runner produces.
+ * `minimumLogLevel` stands in for `Action.run`, which lowers it to `Debug`
+ * under the runner's step debugging; core's default is `Info`.
  */
-const runProgram = (supplied: Record<string, string>, runner: Record<string, string> = {}) =>
+const runProgram = (supplied: Record<string, string>, minimumLogLevel: LogLevel.LogLevel = "Info") =>
 	Effect.gen(function* () {
 		const outputs: ActionOutputsRecording = { sets: [], summaries: [] };
 		const state: ActionStateRecording = { entries: new Map() };
@@ -27,14 +31,14 @@ const runProgram = (supplied: Record<string, string>, runner: Record<string, str
 			program.pipe(
 				Effect.provide(
 					Layer.mergeAll(
-						ActionInput.layer(runnerInputs(supplied)),
-						ActionEnvironment.layerTest(runner),
+						ActionInput.layer(ActionManifest.runnerInputs(manifest, supplied)),
 						ActionLogger.layerTest(),
 						actionOutputsTestLayer(outputs),
 						actionStateTestLayer(state),
 						captureLogger(lines),
 					),
 				),
+				Effect.provideService(References.MinimumLogLevel, minimumLogLevel),
 			),
 		);
 		return { exit, outputs, state, lines };
@@ -83,16 +87,19 @@ describe("program", () => {
 		}),
 	);
 
-	it.effect("surfaces debug logs only when the runner is in step-debug mode", () =>
+	it.effect("logs the decoded inputs at Debug, filtered at the default Info level", () =>
 		Effect.gen(function* () {
+			// Lowering the level on step debug is `Action.run`'s job (the bundle
+			// suite proves it end to end); what this program owns is logging the
+			// line at `Debug`, so it surfaces only when the level is lowered.
 			const isDecodedInputs = (line: LogLine) => line.level === "Debug" && line.message.startsWith("Decoded inputs:");
-			const debug = yield* runProgram({}, { RUNNER_DEBUG: "1" });
+			const debug = yield* runProgram({}, "Debug");
 			assert.isTrue(Exit.isSuccess(debug.exit));
-			assert.isTrue(debug.lines.some(isDecodedInputs), "step debug on: the debug line must reach the log");
+			assert.isTrue(debug.lines.some(isDecodedInputs), "at Debug: the debug line must reach the log");
 			const quiet = yield* runProgram({});
 			assert.isTrue(Exit.isSuccess(quiet.exit));
 			// The control: the same program, the same line, filtered at Info.
-			assert.isFalse(quiet.lines.some(isDecodedInputs), "step debug off: the debug line must be filtered");
+			assert.isFalse(quiet.lines.some(isDecodedInputs), "at Info: the debug line must be filtered");
 			assert.isTrue(quiet.lines.some((line) => line.message.includes("Run context:")));
 		}),
 	);

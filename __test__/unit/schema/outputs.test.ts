@@ -3,11 +3,11 @@ import { Effect } from "effect";
 import { OUTPUT_NAMES, emitOutputs, initialOutputs } from "../../../src/schema/outputs.js";
 import { RunResultIdentity } from "../../../src/schema/result.js";
 import { actionOutputsTestLayer } from "../../utils/doubles.js";
-import { readManifest } from "../../utils/manifest.js";
+import { readActionManifest } from "../../utils/runner.js";
 
 describe("OUTPUT_NAMES", () => {
 	it("matches the outputs action.yml declares", () => {
-		assert.deepStrictEqual([...OUTPUT_NAMES].sort(), [...readManifest().outputs].sort());
+		assert.deepStrictEqual([...OUTPUT_NAMES].sort(), Object.keys(readActionManifest().outputs ?? {}).sort());
 	});
 });
 

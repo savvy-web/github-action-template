@@ -15,12 +15,12 @@ This template is a **working** GitHub Action built on the [`@effected`](https://
 | `src/schema/outputs.ts` | `OUTPUT_NAMES` + the all-disabled baseline + `emitOutputs` (every output exactly once; the baseline is written **before any work**). |
 | `src/schema/result.ts` | The structured `result` output's published contract: one `HostedSchema` identity, one `Schema.Class`, and a pure projection. |
 | `schemastore.config.ts` | Declares the committed JSON Schema for `result`, built from that same class and identity by the `schemastore` command. See [the output-schema chapter](./04-output-schema.md). |
-| `src/shims/` | Tracked local stand-ins for kit surfaces checked absent — today `step-debug.ts` (step debugging → `Debug` log level). See the shim register in `CLAUDE.md`. |
+| `src/shims/` | Tracked local stand-ins for kit surfaces checked absent — none today; create it when one is needed. See the shim register in `CLAUDE.md`. |
 | `src/state.ts` | Cross-phase state as Schema classes with JSON-safe encoded forms. |
 | `src/format.ts` | The single rendering surface: every human-readable string, pure. |
 | `__test__/unit/` | `it.effect` + `assert` suites mirroring `src/`, plus the structural guards. |
 | `__test__/integration/` | `bundle.int.test.ts`: the committed `dist/` run as two real Node processes over temp runner files — bundle truth. |
-| `__test__/utils/` | Recording doubles over the kit's `layerTest` layers, the `action.yml` manifest decoder, and the runner-file harness. Not tests. |
+| `__test__/utils/` | Recording doubles over the kit's `layerTest` layers, and the runner-file harness (which also decodes `action.yml` through the kit's `ActionManifest`). Not tests. |
 
 ## The loop
 

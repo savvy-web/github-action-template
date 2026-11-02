@@ -39,19 +39,19 @@
 		"validate": "github-action-builder validate"
 	},
 	"dependencies": {
-		"@effect/platform-node": "catalog:effect",
+		"@effect/platform-node": "catalog:effected",
 		"@effected/github-actions": "catalog:effected",
 		"@effected/schemastore": "catalog:effected",
-		"effect": "catalog:effect"
+		"effect": "catalog:effected"
 	},
 	"devDependencies": {
-		"@effect/vitest": "catalog:effect",
+		"@effect/vitest": "catalog:effected",
+		"@effected/plugin": "catalog:effected",
 		"@effected/schemastore-cli": "catalog:effected",
-		"@effected/yaml": "catalog:effected",
-		"@okfit/plugin": "^0.5.27",
-		"@savvy-web/github-action-builder": "^2.4.23",
-		"@savvy-web/silk": "^4.5.4",
-		"@vitest-agent/plugin": "^5.6.2"
+		"@okfit/plugin": "^0.5.29",
+		"@savvy-web/github-action-builder": "^2.4.25",
+		"@savvy-web/silk": "^4.5.6",
+		"@vitest-agent/plugin": "^6.0.5"
 	},
 	"engines": {
 		"node": ">=24.11.0"
@@ -59,13 +59,13 @@
 	"devEngines": {
 		"packageManager": {
 			"name": "pnpm",
-			"version": "12.16.1",
+			"version": "12.17.0",
 			"onFail": "download"
 		},
 		"runtime": [
 			{
 				"name": "node",
-				"version": "26.12.1",
+				"version": "26.13.0",
 				"onFail": "ignore"
 			}
 		]

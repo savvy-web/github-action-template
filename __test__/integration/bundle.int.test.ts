@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { assert, describe, it } from "@effect/vitest";
+import { ActionManifest } from "@effected/github-actions";
 import { RunResultIdentity } from "../../src/schema/result.js";
-import { readManifest, runnerInputs } from "../utils/manifest.js";
-import { runBundle } from "../utils/runner.js";
+import { readActionManifest, runBundle } from "../utils/runner.js";
 
 /**
  * Bundle truth: the COMMITTED `dist/` — what the runner actually executes —
@@ -19,6 +19,10 @@ import { runBundle } from "../utils/runner.js";
  */
 
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
+const manifest = readActionManifest();
+/** Runner-shaped inputs: every declared input, supplied value or manifest default. */
+const runnerInputs = (supplied: Readonly<Record<string, string>> = {}) =>
+	ActionManifest.runnerInputs(manifest, supplied);
 const distDir = `${repoRoot}dist`;
 const bundles = ["main.js", "post.js"].map((file) => ({
 	file,
@@ -39,7 +43,7 @@ describe("dist/ run as the runner runs it", () => {
 		assert.strictEqual(post.status, 0, post.stdout + post.stderr);
 
 		// Every output action.yml declares, written by the bundle.
-		assert.deepStrictEqual(Object.keys(main.outputs).sort(), [...readManifest().outputs].sort());
+		assert.deepStrictEqual(Object.keys(main.outputs).sort(), Object.keys(manifest.outputs ?? {}).sort());
 		assert.strictEqual(main.outputs.greeting, "Hello, world.");
 		const result = JSON.parse(main.outputs.result ?? "null") as Record<string, unknown>;
 		assert.deepStrictEqual(result, {

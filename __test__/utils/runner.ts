@@ -14,8 +14,9 @@
  * - Fresh, empty `GITHUB_OUTPUT` / `GITHUB_STATE` / `GITHUB_STEP_SUMMARY` /
  *   `GITHUB_ENV` / `GITHUB_PATH` files per phase, in a temp directory
  *   removed afterwards.
- * - The inputs exactly as the caller built them — use
- *   `manifest.ts`'s `runnerInputs`, so every declared input is present.
+ * - The inputs exactly as the caller built them — use the kit's
+ *   `ActionManifest.runnerInputs` over {@link readActionManifest}, so every
+ *   declared input is present.
  * - The phase boundary: `main`'s `GITHUB_STATE` entries are republished to
  *   `post` as `STATE_<key>` variables, and nothing else crosses.
  *
@@ -32,6 +33,25 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { ActionManifest } from "@effected/github-actions";
+import { Result } from "effect";
+
+/** The repository's own `action.yml`. */
+export const MANIFEST_PATH = fileURLToPath(new URL("../../action.yml", import.meta.url));
+
+/**
+ * The repository's `action.yml`, decoded by the kit's `ActionManifest`.
+ *
+ * @remarks
+ * Synchronous and throwing: in a test, or in `pnpm local`, a manifest that
+ * does not parse should fail loudly before anything runs. Build runner-shaped
+ * inputs from it with `ActionManifest.runnerInputs(manifest, supplied)` —
+ * every declared input present, carrying the supplied value, else its
+ * manifest default, else `""` — never an empty `ActionInput.layer({})`.
+ */
+export const readActionManifest = (path: string = MANIFEST_PATH): ActionManifest =>
+	Result.getOrThrow(ActionManifest.decodeResult(readFileSync(path, "utf8")));
 
 /** What one phase did. */
 export interface PhaseRun {
@@ -57,7 +77,7 @@ export interface ActionRun {
 export interface RunBundleOptions {
 	/** The directory holding `main.js` and `post.js`. */
 	readonly distDir: string;
-	/** The `INPUT_*` environment — build it with `runnerInputs`. */
+	/** The `INPUT_*` environment — build it with `ActionManifest.runnerInputs`. */
 	readonly inputs: Readonly<Record<string, string>>;
 	/** Extra runner variables (`RUNNER_DEBUG`, …). */
 	readonly runner?: Readonly<Record<string, string>>;
