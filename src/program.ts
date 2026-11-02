@@ -16,13 +16,7 @@
  * @module program
  */
 
-import type {
-	ActionEnvironment,
-	ActionOutputError,
-	ActionOutputs,
-	ActionStateError,
-	DryRun,
-} from "@effected/github-actions";
+import type { ActionOutputError, ActionOutputs, ActionStateError, DryRun } from "@effected/github-actions";
 import { ActionLogger, ActionState } from "@effected/github-actions";
 import type { Config } from "effect";
 import { Clock, Effect } from "effect";
@@ -32,7 +26,6 @@ import type { InputError, Inputs } from "./schema/inputs.js";
 import { readInputs } from "./schema/inputs.js";
 import type { OutputsModel } from "./schema/outputs.js";
 import { emitOutputs, initialOutputs } from "./schema/outputs.js";
-import { withStepDebug } from "./shims/step-debug.js";
 import { STATE_KEYS, StartTimeState } from "./state.js";
 import { greet } from "./steps/greet.js";
 import { writeSummary } from "./steps/write-summary.js";
@@ -83,14 +76,15 @@ const pipeline = (inputs: Inputs): Effect.Effect<OutputsModel, never, ActionLogg
  * Failure still fails the effect — never `setFailed`-and-return — so the job's
  * verdict comes from the error channel, rendered by `Action.run`.
  *
- * The whole phase runs under `withStepDebug` (a tracked shim, see
- * `shims/step-debug.ts`): with the runner's step debugging on, every
- * `Effect.logDebug` below reaches the log as `::debug::`; off, it is filtered.
+ * Step debugging is `Action.run`'s job, not this program's: with the runner's
+ * `RUNNER_DEBUG=1`, it lowers the minimum log level to `Debug` for the whole
+ * phase, so every `Effect.logDebug` below reaches the log as `::debug::`; off,
+ * it is filtered at `Info`.
  */
 export const program: Effect.Effect<
 	void,
 	InputError | Config.ConfigError | ActionStateError | ActionOutputError,
-	ActionEnvironment | ActionLogger | ActionOutputs | ActionState
+	ActionLogger | ActionOutputs | ActionState
 > = Effect.gen(function* () {
 	// The all-disabled baseline, BEFORE any work — including before the inputs
 	// are read. See the remarks above for why this is not an `onError` handler.
@@ -118,4 +112,4 @@ export const program: Effect.Effect<
 	for (const line of resultLines(outputs)) {
 		yield* Effect.logInfo(line);
 	}
-}).pipe(withStepDebug);
+});

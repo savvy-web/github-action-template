@@ -23,14 +23,14 @@ If it does not appear, the skills below are absent and the guidance in this file
 
 ## Layout
 
-- `action.yml` — the single source of input/output names AND defaults. Code mirrors it; `__test__/unit/schema/*.test.ts` enforce the mirror (declared ↔ tuple ↔ actually-read, and the runner-shaped environment decoding to exactly the code's own defaults) through `__test__/utils/manifest.ts`.
+- `action.yml` — the single source of input/output names AND defaults. Code mirrors it; `__test__/unit/schema/*.test.ts` enforce the mirror (declared ↔ tuple ↔ actually-read, and the runner-shaped environment decoding to exactly the code's own defaults) through the kit's `ActionManifest` (`readActionManifest` in `__test__/utils/runner.ts` decodes this repo's file).
 - `src/` — entry points (`main.ts`, `post.ts`, guard + `Action.run` only), `program.ts` (pure composition), `steps/` (one module per step), `layers/app.ts`, `schema/` (`inputs.ts`, `outputs.ts`, and `result.ts` — the published `result` output contract and its `HostedSchema` identity), `shims/` (see the register below), `state.ts`, `format.ts` (every rendered string). Conventions: `src/CLAUDE.md`.
 - `__test__/` — `unit/` mirrors `src/`; `integration/bundle.int.test.ts` runs the committed `dist/` as a runner would; `utils/` holds recording doubles, the manifest decoder and the runner-file harness (not tests). Conventions: `__test__/CLAUDE.md`.
 - `dist/` + `.github/actions/local/` — **committed** bundles; the runner executes these, and the `Test` workflow rebuilds and diffs them (dist freshness). Never hand-edit.
 - `schemastore.config.ts` + `schemas/<version>/` — the JSON Schema for the `result` output and the committed document the `schemastore` command (`@effected/schemastore-cli`) emits from it. The entry is `hosted:` the same `RunResultIdentity` the payload stamps into `$schema`, so `$id`, path and URL derive from one value. It ships `published: false` (regenerates in place) — **flip it to `true` at the first real release**; from then a contract change is refused until a version is appended to the identity. The artifact is **generated, never hand-edited**. `pnpm schema:check` is the freshness gate in CI — this repo does not re-test the kit.
 - `.github/workflows/act-test.yml` (`Local Test`) — the self-dogfood loop: on every pull request the action runs itself from `.github/actions/local` on a real runner (main and post, a real run and a rehearsal with `guests`), and each `result` payload is validated against the committed document its `$schema` names.
 - `docs/` — getting started, the optional GitHub App auth module, the bundler forensic notes, and the output-schema contract.
-- `.repos/` — read-only vendored upstream source, pinned to the version this repo installs (`effect` at `effect@4.0.0-rc.117`). Never edit it; the tree is filesystem-locked. Read it to settle what v4 actually exports, and re-pin it in the SAME commit as any `effect` catalog bump (`/silk:repos`).
+- `.repos/` — read-only vendored upstream source, pinned to the version this repo installs (`effect` at `effect@4.1.2`). Never edit it; the tree is filesystem-locked. Read it to settle what v4 actually exports, and re-pin it in the SAME commit as any `effect` catalog bump (`/silk:repos`).
 
 ## Commands
 
@@ -45,7 +45,7 @@ If it does not appear, the skills below are absent and the guidance in this file
 ## Repo-specific rules
 
 - **Entry idiom is uniform**: `if (process.env.GITHUB_ACTIONS) { await Action.run(...) }` with a `v8 ignore` comment, on every entry file. Those guards (plus `vitest.setup.ts`, which strips `GITHUB_ACTIONS`/`INPUT_*`/`STATE_*` so CI test processes stay hermetic) are the only sanctioned ambient `process.env` reads in `src/` — everything else goes through `ActionEnvironment`. (The runner harness in `__test__/utils/runner.ts` inherits only `PATH`/`HOME`/`SystemRoot` into the processes it spawns, so ambient runner variables never leak into a bundle run.)
-- **`action.yml` owns names and defaults.** Change inputs/outputs there first, then follow the failing sync tests — the defaults are enforced too. Tests arrange inputs RUNNER-SHAPED (`runnerInputs` from `__test__/utils/manifest.ts`: every declared input present, carrying its manifest default or `""`), never an empty `ActionInput.layer({})`, which is a state no runner produces.
+- **`action.yml` owns names and defaults.** Change inputs/outputs there first, then follow the failing sync tests — the defaults are enforced too. Tests arrange inputs RUNNER-SHAPED (`ActionManifest.runnerInputs(manifest, supplied)`: every declared input present, carrying its manifest default or `""`), never an empty `ActionInput.layer({})`, which is a state no runner produces.
 - **An error class exists only if src constructs it**, and each step decides its failure posture at design time (fail-the-job / degrade-to-warning / double-netted). `post` never fails the workflow.
 - **Dependency honesty is tested**: every `dependencies` entry must be imported by `src/` or peer-required by one that is (`__test__/unit/structure.test.ts` resolves the peer closure). Add a dep only with its import.
 - **Outputs are emitted before any work.** `program.ts` writes the full baseline as its first statement, never from an `Effect.onError` handler — a failure handler that re-emits the baseline overwrites an output describing work that actually happened. A step whose result must survive a later failure emits its own output as soon as it lands.
@@ -54,11 +54,15 @@ If it does not appear, the skills below are absent and the guidance in this file
 
 ## Shim register
 
-Local stand-ins for kit surfaces that were checked and found absent live in `src/shims/<contract>.ts`, one module per missing contract. **Audited against `@effected/github-actions@0.17.0` and `@effected/schemastore@0.15.2` (2026-09-27).** Restamp with the version and date at every kit bump; an unstamped register is the fossil it exists to prevent.
+Local stand-ins for kit surfaces that were checked and found absent live in `src/shims/<contract>.ts`, one module per missing contract. **Audited against `@effected/github-actions@0.31.0` and `@effected/schemastore@0.29.0` (2026-11-02).** Restamp with the version and date at every kit bump; an unstamped register is the fossil it exists to prevent.
 
 | Shim | Stands in for | Upstream / tracking | Remove when |
 | --- | --- | --- | --- |
-| `src/shims/step-debug.ts` | step debugging (`RUNNER_DEBUG`) lowering `References.MinimumLogLevel` to `Debug` — `Action.run`/`ActionLogger` read `isDebug` into nothing | [effected#853](https://github.com/spencerbeggs/effected/issues/853) / [#113](https://github.com/savvy-web/github-action-template/issues/113) | `Action.run` (or `ActionLogger`) handles step-debug levels itself |
-| `__test__/utils/manifest.ts` (test-side) | an `ActionManifest` decode of `action.yml` plus a runner-shaped input environment for tests | [effected#856](https://github.com/spencerbeggs/effected/issues/856) / [#112](https://github.com/savvy-web/github-action-template/issues/112) | `@effected/github-actions` ships `ActionManifest` (decode + runner-shaped test env) |
+| *(none)* | | | |
+
+Retired at the 2026-11-02 audit, both because the kit now ships the contract:
+
+- `src/shims/step-debug.ts` ([effected#853](https://github.com/spencerbeggs/effected/issues/853) / [#113](https://github.com/savvy-web/github-action-template/issues/113)) — `Action.run` lowers `References.MinimumLogLevel` to `Debug` under `RUNNER_DEBUG=1` itself (`ActionRunOptions.stepDebugLogLevel`, default on).
+- `__test__/utils/manifest.ts` ([effected#856](https://github.com/spencerbeggs/effected/issues/856) / [#112](https://github.com/savvy-web/github-action-template/issues/112)) — replaced by `ActionManifest` (`decodeResult`, `runnerInputs`, `diff`) and `ActionInput.recording`.
 
 Each shim's header must record: the surfaces checked absent and at which kit versions, the tracking issue, and the removal condition. Protocol when you spot code that belongs upstream in `@effected/*`: **ask the user** whether to dogfood the change upstream now or shim it here — and either way file an issue in `spencerbeggs/effected` plus a linked tracking ticket in this repo. Re-audit this register (and every kit-surface claim in comments and docs) on every `@effected/*` version bump; a fossilized "the kit doesn't ship X" comment is the recorded failure mode.

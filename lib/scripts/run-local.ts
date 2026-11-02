@@ -24,13 +24,12 @@
  */
 
 import { fileURLToPath } from "node:url";
+import { ActionManifest } from "@effected/github-actions";
 
-type Manifest = typeof import("../../__test__/utils/manifest.js");
 type Runner = typeof import("../../__test__/utils/runner.js");
 
 const helper = (name: string): string => new URL(`../../__test__/utils/${name}.ts`, import.meta.url).href;
-const { runnerInputs }: Manifest = await import(helper("manifest"));
-const { runBundle }: Runner = await import(helper("runner"));
+const { readActionManifest, runBundle }: Runner = await import(helper("runner"));
 
 const args = process.argv.slice(2);
 const debug = args.includes("--debug");
@@ -44,9 +43,18 @@ for (const arg of args.filter((value) => value !== "--debug")) {
 	supplied[arg.slice(0, separator)] = arg.slice(separator + 1);
 }
 
+// The kit passes an undeclared name through (the runner would too, with a
+// warning); here it is almost certainly a typo, so refuse it.
+const manifest = readActionManifest();
+const { undeclaredInputs } = ActionManifest.diff(manifest, { inputs: Object.keys(supplied) });
+if (undeclaredInputs.length > 0) {
+	console.error(`Not declared in action.yml: ${undeclaredInputs.join(", ")}`);
+	process.exit(64);
+}
+
 const run = runBundle({
 	distDir: fileURLToPath(new URL("../../dist", import.meta.url)),
-	inputs: runnerInputs(supplied),
+	inputs: ActionManifest.runnerInputs(manifest, supplied),
 	...(debug ? { runner: { RUNNER_DEBUG: "1" } } : {}),
 });
 
