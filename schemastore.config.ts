@@ -1,11 +1,11 @@
 /**
  * The JSON Schema publication config for this action's structured `result`
- * output, read by the `schemastore` command from `@effected/schemastore-cli`.
+ * output, read by the `effected schema` command from `@effected/plugin`.
  *
  * @remarks
- * `pnpm schema:build` runs `schemastore build` (generate → lint → ajv strict
+ * `pnpm schema:build` runs `effected schema build` (generate → lint → ajv strict
  * gate → drift policy → content-compared write) and `pnpm schema:check` runs
- * `schemastore check`, the identical walk with no writes, which fails whenever
+ * `effected schema check`, the identical walk with no writes, which fails whenever
  * a build would write anything. The command finds this file by walking upward
  * from the working directory; relative paths resolve against THIS file's
  * directory.

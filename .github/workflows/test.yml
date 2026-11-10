@@ -93,7 +93,7 @@ jobs:
         with:
           install-deps: "true"
 
-      # `schemastore check` is the identical walk to `schemastore build` with no
+      # `effected schema check` is the identical walk to `effected schema build` with no
       # writes. It exits 1 when a build would write anything (a stale or missing
       # document), when a published label's contract drifted (bump the version,
       # never force), or when the ajv strict gate or structural lint fails —

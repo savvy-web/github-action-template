@@ -5,7 +5,7 @@ import { RunResult, RunResultIdentity, toRunResult } from "../../../src/schema/r
 
 /**
  * The `result` contract as THIS action defines it. What the kit owns — the
- * identity's URL derivation, the document the `schemastore` command writes,
+ * identity's URL derivation, the document the `effected schema` command writes,
  * drift and freshness — is `pnpm schema:check` in CI and tested upstream; it
  * is deliberately not re-tested here.
  */

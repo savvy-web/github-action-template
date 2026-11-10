@@ -30,7 +30,7 @@
  *
  * `@effected/schemastore` is a runtime dependency for exactly one reason: to
  * read this identity. It is engine-free (ajv lives in
- * `@effected/schemastore-cli`, a devDependency), and the bundle-truth
+ * `@effected/engine`, under the `@effected/plugin` devDependency), and the bundle-truth
  * integration test asserts no engine reaches `dist/`.
  *
  * @module schema/result

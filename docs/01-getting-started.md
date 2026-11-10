@@ -14,7 +14,7 @@ This template is a **working** GitHub Action built on the [`@effected`](https://
 | `src/schema/inputs.ts` | `INPUT_NAMES` + `readInputs`: decoded once, validated once, tested separately. `guests` is the live line-list example (`ActionInput.list`). |
 | `src/schema/outputs.ts` | `OUTPUT_NAMES` + the all-disabled baseline + `emitOutputs` (every output exactly once; the baseline is written **before any work**). |
 | `src/schema/result.ts` | The structured `result` output's published contract: one `HostedSchema` identity, one `Schema.Class`, and a pure projection. |
-| `schemastore.config.ts` | Declares the committed JSON Schema for `result`, built from that same class and identity by the `schemastore` command. See [the output-schema chapter](./04-output-schema.md). |
+| `schemastore.config.ts` | Declares the committed JSON Schema for `result`, built from that same class and identity by the `effected schema` command. See [the output-schema chapter](./04-output-schema.md). |
 | `src/shims/` | Tracked local stand-ins for kit surfaces checked absent — none today; create it when one is needed. See the shim register in `CLAUDE.md`. |
 | `src/state.ts` | Cross-phase state as Schema classes with JSON-safe encoded forms. |
 | `src/format.ts` | The single rendering surface: every human-readable string, pure. |
@@ -30,8 +30,8 @@ pnpm test            # vitest + strict coverage; the structural guards run here
 pnpm build           # turbo → types:check + schema:build → github-action-builder → dist/ + .github/actions/local/
 pnpm local           # run the built dist/ main then post over temp runner files (input=value …, --debug)
 pnpm validate        # builder sanity checks against action.yml
-pnpm schema:build    # regenerate schemas/ from src/schema/result.ts (schemastore build)
-pnpm schema:check    # the drift gate, on its own (schemastore check; CI runs it)
+pnpm schema:build    # regenerate schemas/ from src/schema/result.ts (effected schema build)
+pnpm schema:check    # the drift gate, on its own (effected schema check; CI runs it)
 ```
 
 `dist/` and `.github/actions/local/` are **committed**: the runner executes those files, and the `Test` workflow's dist-freshness job rebuilds and diffs them so a stale bundle cannot merge. The integration suite runs that committed `dist/` (so run `pnpm build` before `pnpm test` after a source change), and `pnpm local` runs it by hand. The `Local Test` workflow — on every pull request, or via `act` (preconfigured in `.actrc`) — is the self-dogfood loop: the action runs itself from the committed local bundle on a real runner, and its `result` payloads are validated against the committed schema.
