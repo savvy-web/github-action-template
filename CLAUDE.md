@@ -27,10 +27,10 @@ If it does not appear, the skills below are absent and the guidance in this file
 - `src/` — entry points (`main.ts`, `post.ts`, guard + `Action.run` only), `program.ts` (pure composition), `steps/` (one module per step), `layers/app.ts`, `schema/` (`inputs.ts`, `outputs.ts`, and `result.ts` — the published `result` output contract and its `HostedSchema` identity), `shims/` (see the register below), `state.ts`, `format.ts` (every rendered string). Conventions: `src/CLAUDE.md`.
 - `__test__/` — `unit/` mirrors `src/`; `integration/bundle.int.test.ts` runs the committed `dist/` as a runner would; `utils/` holds recording doubles, the manifest decoder and the runner-file harness (not tests). Conventions: `__test__/CLAUDE.md`.
 - `dist/` + `.github/actions/local/` — **committed** bundles; the runner executes these, and the `Test` workflow rebuilds and diffs them (dist freshness). Never hand-edit.
-- `schemastore.config.ts` + `schemas/<version>/` — the JSON Schema for the `result` output and the committed document the `schemastore` command (`@effected/schemastore-cli`) emits from it. The entry is `hosted:` the same `RunResultIdentity` the payload stamps into `$schema`, so `$id`, path and URL derive from one value. It ships `published: false` (regenerates in place) — **flip it to `true` at the first real release**; from then a contract change is refused until a version is appended to the identity. The artifact is **generated, never hand-edited**. `pnpm schema:check` is the freshness gate in CI — this repo does not re-test the kit.
+- `schemastore.config.ts` + `schemas/<version>/` — the JSON Schema for the `result` output and the committed document the `effected schema` command (`@effected/plugin`) emits from it. The entry is `hosted:` the same `RunResultIdentity` the payload stamps into `$schema`, so `$id`, path and URL derive from one value. It ships `published: false` (regenerates in place) — **flip it to `true` at the first real release**; from then a contract change is refused until a version is appended to the identity. The artifact is **generated, never hand-edited**. `pnpm schema:check` is the freshness gate in CI — this repo does not re-test the kit.
 - `.github/workflows/act-test.yml` (`Local Test`) — the self-dogfood loop: on every pull request the action runs itself from `.github/actions/local` on a real runner (main and post, a real run and a rehearsal with `guests`), and each `result` payload is validated against the committed document its `$schema` names.
 - `docs/` — getting started, the optional GitHub App auth module, the bundler forensic notes, and the output-schema contract.
-- `.repos/` — read-only vendored upstream source, pinned to the version this repo installs (`effect` at `effect@4.1.2`). Never edit it; the tree is filesystem-locked. Read it to settle what v4 actually exports, and re-pin it in the SAME commit as any `effect` catalog bump (`/silk:repos`).
+- `.repos/` — read-only vendored upstream source, pinned to the version this repo installs (`effect` at `effect@4.1.3`). Never edit it; the tree is filesystem-locked. Read it to settle what v4 actually exports, and re-pin it in the SAME commit as any `effect` catalog bump (`/silk:repos`).
 
 ## Commands
 
@@ -38,7 +38,7 @@ If it does not appear, the skills below are absent and the guidance in this file
 - `pnpm build` — turbo: `types:check` and `schema:build`, then `github-action-builder build` → `dist/` and `.github/actions/local/`. Never run the builder directly outside turbo.
 - `pnpm local [input=value …] [--debug]` — run the built `dist/` main then post over temp runner files (every declared input present, defaults from `action.yml`) and print outputs and the job summary. Same harness as the integration test (`__test__/utils/runner.ts`).
 - `pnpm validate` — builder checks against `action.yml`.
-- `pnpm schema:build` / `pnpm schema:check` — `schemastore build` regenerates the committed `result` schema (content-compared; once `published: true`, a contract change is refused, exit 1, until the next label is appended to `RunResultIdentity`'s `versions` — the old label stays as a frozen file); `schemastore check` is the same walk with no writes and fails whenever a build would write anything — the CI schema-freshness gate. `pnpm build` runs `schema:build` first via turbo. Never `--force` a published schema.
+- `pnpm schema:build` / `pnpm schema:check` — `effected schema build` regenerates the committed `result` schema (content-compared; once `published: true`, a contract change is refused, exit 1, until the next label is appended to `RunResultIdentity`'s `versions` — the old label stays as a frozen file); `effected schema check` is the same walk with no writes and fails whenever a build would write anything — the CI schema-freshness gate. `pnpm build` runs `schema:build` first via turbo. Never `--force` a published schema.
 - `pnpm claude` — Claude Code against a local checkout of the effected plugin (see above).
 - `pnpm lint` / `lint:fix` / `lint:md` — Biome and markdownlint via the silk presets.
 
@@ -54,7 +54,7 @@ If it does not appear, the skills below are absent and the guidance in this file
 
 ## Shim register
 
-Local stand-ins for kit surfaces that were checked and found absent live in `src/shims/<contract>.ts`, one module per missing contract. **Audited against `@effected/github-actions@0.31.0` and `@effected/schemastore@0.29.0` (2026-11-02).** Restamp with the version and date at every kit bump; an unstamped register is the fossil it exists to prevent.
+Local stand-ins for kit surfaces that were checked and found absent live in `src/shims/<contract>.ts`, one module per missing contract. **Audited against `@effected/github-actions@0.33.0` and `@effected/schemastore@0.32.0` (2026-11-10).** Restamp with the version and date at every kit bump; an unstamped register is the fossil it exists to prevent.
 
 | Shim | Stands in for | Upstream / tracking | Remove when |
 | --- | --- | --- | --- |

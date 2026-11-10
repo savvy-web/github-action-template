@@ -8,7 +8,7 @@ The `greeting` output is a plain string. The `result` output is **JSON with a pu
 | --- | --- |
 | `src/schema/result.ts` | `RunResultIdentity` (a `HostedSchema`: where the document lives and which version is current), `RunResult` (the one `Schema.Class` — the codec `setJson` encodes through AND the source the document is generated from) and `toRunResult` (the pure projection from the internal model). |
 | `src/schema/outputs.ts` | `emitOutputs` passes `RunResult` to `ActionOutputs.setJson`, which takes the schema as its **encoder**. |
-| `schemastore.config.ts` | The `defineConfig` value the `schemastore` command reads: one entry, keyed by `RunResultIdentity.name`, `hosted: RunResultIdentity`, `published: false`. |
+| `schemastore.config.ts` | The `defineConfig` value the `effected schema` command reads: one entry, keyed by `RunResultIdentity.name`, `hosted: RunResultIdentity`, `published: false`. |
 | `schemas/<version>/github-action-template-<version>.json` | The committed document. Generated; never hand-edited. |
 
 ## One identity, one schema
@@ -17,16 +17,16 @@ The `greeting` output is a plain string. The `result` output is **JSON with a pu
 
 `RunResult` is likewise one schema used twice: `setJson`'s encoder and the config entry's `schema`. Two schemas describing "the same" output drift independently; one used for both never can. What absorbs internal churn is `toRunResult`, a plain total function from the action's internal `OutputsModel` to the published shape — so a model change is a compile error at that one call site rather than a silently changed contract downstream.
 
-`@effected/schemastore` is therefore a runtime `dependency` (the action reads the identity from it) while `@effected/schemastore-cli`, which carries the ajv engine, stays a `devDependency`. The bundle-truth integration test (`__test__/integration/bundle.int.test.ts`) asserts no engine reaches `dist/`.
+`@effected/schemastore` is therefore a runtime `dependency` (the action reads the identity from it) while `@effected/plugin`, whose `@effected/engine` carries ajv, stays a `devDependency`. The bundle-truth integration test (`__test__/integration/bundle.int.test.ts`) asserts no engine reaches `dist/`.
 
 ## The commands
 
 ```sh
-pnpm schema:build   # schemastore build — regenerate schemas/ and commit the result
-pnpm schema:check   # schemastore check — the drift gate, no writes (CI runs it)
+pnpm schema:build   # effected schema build — regenerate schemas/ and commit the result
+pnpm schema:check   # effected schema check — the drift gate, no writes (CI runs it)
 ```
 
-Both are the `schemastore` bin from [`@effected/schemastore-cli`](https://github.com/spencerbeggs/effected/tree/main/packages/schemastore-cli), which finds `schemastore.config.ts` by walking upward from the working directory. Everything between "an Effect Schema" and "a committed file" belongs to the kit: [`@effected/schemastore`](https://github.com/spencerbeggs/effected/tree/main/packages/schemastore)'s pipeline generates, lints, validates under ajv strict mode, classifies the change against the file on disk, and writes only when the parsed content moved. This repository writes the identity and the config and nothing else — no generator script, no hand-rolled Draft-07 lowering, no drift-policy code, no drift test. `pnpm build` runs `schema:build` first (a turbo dependency of `build:prod`), and the `Test` workflow's schema-freshness job runs `pnpm schema:check`, which exits `1` whenever a build would write anything. The `Local Test` workflow additionally validates the action's real `result` payloads against the committed document they name.
+Both are the `effected schema` command from [`@effected/plugin`](https://github.com/spencerbeggs/effected/tree/main/packages/plugin), which finds `schemastore.config.ts` by walking upward from the working directory. Everything between "an Effect Schema" and "a committed file" belongs to the kit: [`@effected/schemastore`](https://github.com/spencerbeggs/effected/tree/main/packages/schemastore)'s pipeline generates, lints, validates under ajv strict mode, classifies the change against the file on disk, and writes only when the parsed content moved. This repository writes the identity and the config and nothing else — no generator script, no hand-rolled Draft-07 lowering, no drift-policy code, no drift test. `pnpm build` runs `schema:build` first (a turbo dependency of `build:prod`), and the `Test` workflow's schema-freshness job runs `pnpm schema:check`, which exits `1` whenever a build would write anything. The `Local Test` workflow additionally validates the action's real `result` payloads against the committed document they name.
 
 ## `published`: the lifecycle switch
 
@@ -65,7 +65,7 @@ An action that publishes only scalar outputs has no contract to version and shou
 2. **`src/schema/result.ts`** — delete the file.
 3. **`src/schema/outputs.ts`** — drop `"result"` from `OUTPUT_NAMES`, the `setJson` call from `emitOutputs`, and the `result.js` import.
 4. **`schemas/`** and **`schemastore.config.ts`** — delete both.
-5. **`package.json`** — remove `@effected/schemastore` from `dependencies`, `@effected/schemastore-cli` from `devDependencies`, and the `schema:build` / `schema:check` scripts. Run `pnpm install`.
+5. **`package.json`** — remove `@effected/schemastore` from `dependencies`, the `schema:build` / `schema:check` scripts. Run `pnpm install`.
 6. **`turbo.json`** — delete the `schema:build` task and drop it from `build:prod`'s `dependsOn`.
 7. **`.github/workflows/test.yml`** — delete the `schema-freshness` job.
 8. **`.github/workflows/act-test.yml`** — delete the `result` assertions and the "Validate the result payloads" step.

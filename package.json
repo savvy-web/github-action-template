@@ -29,8 +29,8 @@
 		"lint:md:fix": "markdownlint-cli2  --config './lib/configs/.markdownlint-cli2.jsonc' --fix",
 		"local": "node lib/scripts/run-local.ts",
 		"prepare": "husky",
-		"schema:build": "schemastore build",
-		"schema:check": "schemastore check",
+		"schema:build": "effected schema build",
+		"schema:check": "effected schema check",
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage",
 		"test:watch": "vitest --watch",
@@ -47,10 +47,9 @@
 	"devDependencies": {
 		"@effect/vitest": "catalog:effected",
 		"@effected/plugin": "catalog:effected",
-		"@effected/schemastore-cli": "catalog:effected",
 		"@okfit/plugin": "^0.5.29",
 		"@savvy-web/github-action-builder": "^2.4.25",
-		"@savvy-web/silk": "^4.5.6",
+		"@savvy-web/silk": "^5.0.0",
 		"@vitest-agent/plugin": "^6.0.5"
 	},
 	"engines": {

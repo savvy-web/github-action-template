@@ -97,7 +97,7 @@ describe("dist/ run as the runner runs it", () => {
 
 describe("dist/ carries no heavy engine", () => {
 	// Each is confined upstream to modules this action never imports: ajv to
-	// `@effected/schemastore-cli` (a devDependency), Azure to the cache/artifact
+	// `@effected/engine` (under the `@effected/plugin` devDependency), Azure to the cache/artifact
 	// tier, Sigstore to `@effected/sbom`, octokit to `@effected/github`.
 	const forbidden = ["ajv", "@azure", "sigstore", "octokit"];
 
