@@ -1,8 +1,8 @@
----
-"@savvy-web/github-action-template": patch
----
+# @savvy-web/github-action-template
 
-## Dependencies
+## 0.0.1
+
+### Dependencies
 
 | Dependency | Type | Action | From | To |
 | --- | --- | --- | --- | --- |
