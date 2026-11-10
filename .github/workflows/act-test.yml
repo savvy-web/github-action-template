@@ -47,7 +47,7 @@ jobs:
           name: act
           guests: |
             - Ada
-            # a comment line, ignored
+            # a comment line is ignored (no comma: list inputs also split on commas)
             - Grace
           dry-run: "true"
 
