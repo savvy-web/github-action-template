@@ -47,10 +47,10 @@
 	"devDependencies": {
 		"@effect/vitest": "catalog:effected",
 		"@effected/plugin": "catalog:effected",
-		"@okfit/plugin": "^0.5.29",
-		"@savvy-web/github-action-builder": "^2.4.25",
+		"@okfit/plugin": "^0.5.32",
+		"@savvy-web/github-action-builder": "^2.4.26",
 		"@savvy-web/silk": "^5.0.0",
-		"@vitest-agent/plugin": "^6.0.5"
+		"@vitest-agent/plugin": "^6.0.9"
 	},
 	"engines": {
 		"node": ">=24.11.0"
@@ -58,7 +58,7 @@
 	"devEngines": {
 		"packageManager": {
 			"name": "pnpm",
-			"version": "12.17.0",
+			"version": "12.19.0",
 			"onFail": "download"
 		},
 		"runtime": [
