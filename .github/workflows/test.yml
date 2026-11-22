@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup runtime
-        uses: savvy-web/silk-runtime-action@v1
+        uses: savvy-web/silk-runtime-action@v2
         with:
           install-deps: "true"
 
@@ -60,7 +60,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup runtime
-        uses: savvy-web/silk-runtime-action@v1
+        uses: savvy-web/silk-runtime-action@v2
         with:
           install-deps: "true"
 
@@ -89,7 +89,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup runtime
-        uses: savvy-web/silk-runtime-action@v1
+        uses: savvy-web/silk-runtime-action@v2
         with:
           install-deps: "true"
 
