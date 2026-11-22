@@ -23,6 +23,11 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      # Signs the job in to the hosted turbo cache. A pull request from a fork
+      # gets no token, and the action falls back to the GitHub Actions cache.
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -31,6 +36,7 @@ jobs:
         uses: savvy-web/silk-runtime-action@v2
         with:
           install-deps: "true"
+          turbo-api: https://cache.savvyweb.systems
 
       - name: Typecheck
         run: pnpm typecheck
@@ -55,6 +61,11 @@ jobs:
     name: dist freshness
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      # Signs the job in to the hosted turbo cache. A pull request from a fork
+      # gets no token, and the action falls back to the GitHub Actions cache.
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -63,6 +74,7 @@ jobs:
         uses: savvy-web/silk-runtime-action@v2
         with:
           install-deps: "true"
+          turbo-api: https://cache.savvyweb.systems
 
       # `dist/` and `.github/actions/local/` are COMMITTED — the runner executes
       # them, not `src/`. vitest runs source, so the suite can never see a stale
